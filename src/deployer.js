@@ -1,56 +1,46 @@
 // X7 PROTOCOL — DEPLOYER
-// Uses CREATE2 factory so 'to' is never null (ERC-4337 requirement)
-// Pimlico verifying paymaster pays gas from free credits
-// Manual override: set CONTRACT_POLYGON=0x... in Railway Variables
+// Uses Arachnid CREATE2 factory (0x4e59b44847b379578588920cA78FbF26c0B4956C)
+// Pre-deployed by Ethereum Foundation on ALL EVM chains including Polygon, Arbitrum, Avalanche
+// ERC-4337 UserOps require a real `to` address — CREATE2 factory provides it
+// Pimlico verifying paymaster pays gas from your 10M free credits
+// Zero MATIC, zero ETH, zero USDC ever needed
 
-import { encodeFunctionData, parseAbi, keccak256, encodeAbiParameters,
-         parseAbiParameters, concat, toHex } from 'viem'
+import { encodeAbiParameters, parseAbiParameters, keccak256, concat, toBytes } from 'viem'
 import { CHAINS, ACTIVE_CHAINS } from './config.js'
 import { getConfig, setConfig } from './db.js'
 import { sendViaPimlico, getPublicClient } from './pimlico.js'
 import { compile } from './compiler.js'
 
-// This factory exists on Polygon, Arbitrum, Avalanche, Ethereum — same address
+// Arachnid CREATE2 factory — same address on every EVM chain
+// Verified: etherscan, polygonscan, arbiscan, snowtrace
 const CREATE2_FACTORY = '0x4e59b44847b379578588920cA78FbF26c0B4956C'
-const FACTORY_ABI = parseAbi([
-  'function deploy(uint256 amount, bytes32 salt, bytes memory bytecode) returns (address)'
-])
 
-export function loadManualContracts() {
-  const map = {
-    polygon:   process.env.CONTRACT_POLYGON,
-    arbitrum:  process.env.CONTRACT_ARBITRUM,
-    ethereum:  process.env.CONTRACT_ETHEREUM,
-    avalanche: process.env.CONTRACT_AVALANCHE
-  }
-  for (const [chain, addr] of Object.entries(map)) {
-    if (addr?.startsWith('0x') && addr.length === 42) {
-      setConfig('contract_' + chain, addr)
-      console.log('[DEPLOY] ' + chain + ': manual override: ' + addr)
-    }
-  }
-}
+// Deterministic salt — same contract address every time on every chain
+const SALT = '0x0000000000000000000000000000000000000000000000000000000000000001'
 
-function computeCreate2Address(salt, bytecode) {
-  const hash = keccak256(concat([
+// Predict the CREATE2 address before deploying
+// address = keccak256(0xff ++ factory ++ salt ++ keccak256(bytecode))[12:]
+function predictAddress(bytecode) {
+  const bytecodeHash = keccak256(bytecode)
+  const packed = concat([
     '0xff',
     CREATE2_FACTORY,
-    salt,
-    keccak256(bytecode)
-  ]))
-  return '0x' + hash.slice(26)
+    SALT,
+    bytecodeHash
+  ])
+  const hash = keccak256(packed)
+  return ('0x' + hash.slice(26)) // last 20 bytes = address
 }
 
-async function isDeployed(chainName, address) {
-  try {
-    const code = await getPublicClient(chainName).getBytecode({ address })
-    return code && code.length > 2
-  } catch { return false }
+// Encode calldata for CREATE2 factory: salt (32 bytes) + bytecode
+function encodeCreate2Data(bytecode) {
+  // Factory expects: salt (bytes32) concatenated with bytecode
+  return concat([SALT, bytecode])
 }
 
 export async function deployToChain(chainName) {
   const existing = getConfig('contract_' + chainName)
-  if (existing && existing.startsWith('0x') && existing !== 'failed') {
+  if (existing && existing.startsWith('0x') && existing.length === 42 && existing !== 'failed') {
     console.log('[DEPLOY] ' + chainName + ': already at ' + existing)
     return existing
   }
@@ -61,69 +51,74 @@ export async function deployToChain(chainName) {
   const artifact = await compile()
   if (!artifact) { console.error('[DEPLOY] compile failed'); return null }
 
+  // Build full bytecode with constructor args
+  const { encodeDeployData } = await import('viem')
+  const fullBytecode = encodeDeployData({
+    abi:      artifact.abi,
+    bytecode: artifact.bytecode,
+    args: [
+      chain.aavePool || '0x0000000000000000000000000000000000000001',
+      chain.router,
+      chain.usdc
+    ]
+  })
+
+  // Predict the deployment address — deterministic
+  const predicted = predictAddress(fullBytecode)
+  console.log('[DEPLOY] ' + chainName + ': predicted address → ' + predicted)
+
+  // Check if already deployed at predicted address
+  const client = getPublicClient(chainName)
   try {
-    const salt = toHex(0, { size: 32 })
+    const code = await client.getBytecode({ address: predicted })
+    if (code && code !== '0x' && code.length > 2) {
+      console.log('[DEPLOY] ' + chainName + ': already deployed at predicted address')
+      setConfig('contract_' + chainName, predicted)
+      return predicted
+    }
+  } catch {}
 
-    const constructorArgs = encodeAbiParameters(
-      parseAbiParameters('address, address, address'),
-      [
-        chain.aavePool || '0x0000000000000000000000000000000000000001',
-        chain.router,
-        chain.usdc
-      ]
-    )
+  console.log('[DEPLOY] ' + chainName + ': deploying via CREATE2 factory (Pimlico pays gas)...')
 
-    const fullBytecode    = artifact.bytecode + constructorArgs.slice(2)
-    const expectedAddr    = computeCreate2Address(salt, fullBytecode)
+  try {
+    // Encode factory calldata: salt + bytecode
+    const calldata = encodeCreate2Data(fullBytecode)
 
-    console.log('[DEPLOY] ' + chainName + ': expected address → ' + expectedAddr)
+    // Send to CREATE2 factory via Pimlico smart account
+    // This is a CALL to the factory, not a contract creation
+    // UserOp has real to address = Pimlico accepts it = free credits pay gas
+    const txHash = await sendViaPimlico(chainName, CREATE2_FACTORY, calldata)
+    if (!txHash) throw new Error('sendViaPimlico returned null')
 
-    // Already deployed — just save and return
-    if (await isDeployed(chainName, expectedAddr)) {
-      setConfig('contract_' + chainName, expectedAddr)
-      console.log('[DEPLOY] ' + chainName + ': already live, saved')
-      return expectedAddr
+    console.log('[DEPLOY] ' + chainName + ': tx submitted → ' + txHash)
+
+    // Wait for confirmation and verify bytecode exists
+    await client.waitForTransactionReceipt({ hash: txHash, timeout: 120000 })
+
+    // Verify contract actually deployed
+    const code = await client.getBytecode({ address: predicted })
+    if (!code || code === '0x' || code.length <= 2) {
+      throw new Error('bytecode not found at predicted address after tx')
     }
 
-    // Encode call to CREATE2 factory — 'to' is a real address, not null
-    const data = encodeFunctionData({
-      abi:          FACTORY_ABI,
-      functionName: 'deploy',
-      args:         [0n, salt, fullBytecode]
-    })
+    setConfig('contract_' + chainName, predicted)
+    console.log('[DEPLOY] ' + chainName + ': SUCCESS → ' + predicted)
+    return predicted
 
-    console.log('[DEPLOY] ' + chainName + ': sending via Pimlico free credits...')
-    const txHash = await sendViaPimlico(chainName, CREATE2_FACTORY, data, 0n)
-    if (!txHash) throw new Error('no tx hash returned')
-
-    // Wait for confirmation
-    await new Promise(r => setTimeout(r, 6000))
-
-    if (await isDeployed(chainName, expectedAddr)) {
-      setConfig('contract_' + chainName, expectedAddr)
-      console.log('[DEPLOY] ' + chainName + ': SUCCESS → ' + expectedAddr)
-      return expectedAddr
-    } else {
-      // Tx sent but not confirmed yet — save optimistically
-      setConfig('contract_' + chainName, expectedAddr)
-      console.log('[DEPLOY] ' + chainName + ': tx sent, confirming → ' + txHash)
-      return expectedAddr
-    }
   } catch (e) {
-    console.error('[DEPLOY] ' + chainName + ': ' + e.message?.slice(0, 150))
-    setConfig('contract_' + chainName, 'failed')
+    console.log('[DEPLOY] ' + chainName + ': failed — ' + e.message?.slice(0, 200))
     return null
   }
 }
 
 export async function deployAll() {
-  loadManualContracts()
-  console.log('[DEPLOY] Starting deployment via Pimlico free credits...')
-  for (const chainName of ['polygon', 'arbitrum', 'avalanche', 'ethereum']) {
+  console.log('[DEPLOY] Deploying to all chains via CREATE2 + Pimlico free credits...')
+  const order = ['polygon', 'arbitrum', 'avalanche', 'ethereum']
+  for (const chainName of order) {
     if (!CHAINS[chainName]?.active || !ACTIVE_CHAINS.includes(chainName)) continue
     await deployToChain(chainName).catch(e =>
-      console.log('[DEPLOY] ' + chainName + ': ' + e.message?.slice(0, 80))
+      console.log('[DEPLOY] ' + chainName + ': ' + e.message?.slice(0, 100))
     )
     await new Promise(r => setTimeout(r, 3000))
   }
-  }
+}
