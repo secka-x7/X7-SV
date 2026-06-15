@@ -7,124 +7,342 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#080808;--s1:#0d0d0d;--s2:#121212;--b:#1e1e1e;
-  --blue:#2563eb;--bluel:#3b82f6;--blueg:rgba(37,99,235,.08);
-  --green:#10b981;--red:#ef4444;--yellow:#f59e0b;
-  --t1:#f1f5f9;--t2:#64748b;--t3:#334155;
-  --mono:'JetBrains Mono',monospace
+  --bg:#060608;--s1:#0a0a0f;--s2:#0f0f16;--b:#1a1a2e;--b2:#16213e;
+  --blue:#2563eb;--bluel:#3b82f6;--blueg:rgba(37,99,235,.1);--bluedark:#1d4ed8;
+  --green:#10b981;--greend:#059669;--red:#ef4444;--yellow:#f59e0b;--purple:#8b5cf6;
+  --t1:#e2e8f0;--t2:#64748b;--t3:#2d3748;--t4:#1a202c;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+  --radius:6px;--radius-lg:10px
 }
 html,body{height:100%;background:var(--bg);color:var(--t1);
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
-.layout{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  overflow-x:hidden;font-size:13px}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+
+/* SIDEBAR */
 .sidebar{background:var(--s1);border-right:1px solid var(--b);
-  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.logo-wrap{padding:20px;border-bottom:1px solid var(--b)}
-.logo{font-size:16px;font-weight:700;letter-spacing:3px;color:var(--bluel)}
-.logo-sub{font-size:9px;color:var(--t3);letter-spacing:2px;margin-top:3px}
-nav{flex:1;padding:8px 0}
-.ni{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;
-  color:var(--t2);font-size:12px;font-weight:500;transition:.15s;
-  border-left:2px solid transparent;letter-spacing:.5px}
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo-wrap{padding:22px 20px 16px;border-bottom:1px solid var(--b)}
+.logo{font-size:17px;font-weight:800;letter-spacing:4px;color:var(--bluel);
+  text-shadow:0 0 20px rgba(59,130,246,.4)}
+.logo-sub{font-size:9px;color:var(--t3);letter-spacing:3px;margin-top:4px;text-transform:uppercase}
+.logo-ver{font-size:8px;color:var(--t3);margin-top:2px}
+
+/* STATUS BAR */
+.status-bar{padding:10px 16px;border-bottom:1px solid var(--b);background:var(--s2)}
+.live-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:pulse 2s infinite;flex-shrink:0}
+.live-dot.red{background:var(--red)}
+.live-dot.yellow{background:var(--yellow)}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 currentColor}
+  50%{opacity:.6;box-shadow:0 0 0 3px transparent}}
+.live-label{font-size:9px;color:var(--green);letter-spacing:2px;font-weight:700}
+.uptime-val{font-size:9px;color:var(--t3);margin-left:auto}
+
+/* NAV */
+nav{flex:1;padding:6px 0}
+.nav-section{padding:10px 16px 4px;font-size:8px;color:var(--t3);
+  letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;
+  color:var(--t2);font-size:11px;font-weight:500;transition:.15s;
+  border-left:2px solid transparent;letter-spacing:.3px;user-select:none}
 .ni:hover{background:var(--blueg);color:var(--t1)}
 .ni.on{background:var(--blueg);color:var(--bluel);border-left-color:var(--blue)}
-.sb-foot{padding:16px;border-top:1px solid var(--b)}
-.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
-  background:var(--green);animation:pulse 2s infinite;margin-right:6px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.main{padding:24px;overflow-y:auto}
-.page{display:none}.page.on{display:block}
-.ph{margin-bottom:20px}
-.pt{font-size:18px;font-weight:700;letter-spacing:.5px}
-.ps{font-size:12px;color:var(--t2);margin-top:3px}
-.rev-bar{background:var(--s2);border:1px solid var(--b);border-radius:8px;
-  padding:14px 20px;margin-bottom:20px;display:flex;gap:28px;flex-wrap:wrap;align-items:center}
-.rv{min-width:120px}
-.rl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
-.rv-val{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--green)}
+.ni-badge{margin-left:auto;font-size:8px;padding:2px 6px;border-radius:10px;
+  background:var(--red);color:#fff;font-weight:700;min-width:18px;text-align:center}
+.ni-badge.green{background:var(--green)}
+.ni-badge.blue{background:var(--blue)}
+
+/* QUICK STATS SIDEBAR */
+.sb-stats{padding:10px 14px;border-top:1px solid var(--b);border-bottom:1px solid var(--b)}
+.sb-stat{display:flex;justify-content:space-between;align-items:center;
+  padding:4px 0;font-size:10px}
+.sb-stat-l{color:var(--t3)}
+.sb-stat-v{font-family:var(--mono);color:var(--t1);font-weight:600}
+.sb-stat-v.green{color:var(--green)}
+.sb-stat-v.blue{color:var(--bluel)}
+.sb-stat-v.yellow{color:var(--yellow)}
+
+/* EXECUTOR BOX */
+.exec-box{padding:10px 14px;border-top:1px solid var(--b);background:var(--s2)}
+.exec-label{font-size:8px;color:var(--t3);letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:4px}
+.exec-addr{font-family:var(--mono);font-size:9px;color:var(--bluel);
+  word-break:break-all;cursor:pointer;line-height:1.5}
+.exec-addr:hover{color:var(--t1)}
+.exec-copy{font-size:8px;color:var(--t3);margin-top:3px;cursor:pointer}
+.exec-copy:hover{color:var(--bluel)}
+
+/* MAIN */
+.main{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.page{display:none}.page.on{display:flex;flex-direction:column;gap:14px}
+.ph{display:flex;align-items:center;justify-content:space-between}
+.ph-left{display:flex;flex-direction:column;gap:3px}
+.pt{font-size:16px;font-weight:700;letter-spacing:.5px}
+.ps{font-size:11px;color:var(--t2)}
+.ph-right{display:flex;gap:8px;align-items:center}
+
+/* REVENUE BAR */
+.rev-bar{background:var(--s1);border:1px solid var(--b);border-radius:var(--radius-lg);
+  padding:14px 20px;display:flex;gap:0;flex-wrap:wrap;align-items:stretch;
+  position:relative;overflow:hidden}
+.rev-bar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--blue),var(--purple),var(--green))}
+.rv{min-width:130px;padding:0 20px;border-right:1px solid var(--b)}
+.rv:first-child{padding-left:0}
+.rv:last-child{border-right:none}
+.rl{font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+.rv-val{font-size:22px;font-weight:800;font-family:var(--mono);color:var(--green);
+  line-height:1}
 .rv-val.blue{color:var(--bluel)}
-.rd{width:1px;height:36px;background:var(--b)}
-.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.card{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:18px}
-.card.sm{padding:14px}
-.ct{font-size:9px;color:var(--t3);text-transform:uppercase;
-  letter-spacing:1.5px;margin-bottom:8px}
-.cv{font-size:22px;font-weight:700;font-family:var(--mono)}
-.cv.g{color:var(--green)}.cv.b{color:var(--bluel)}.cv.y{color:var(--yellow)}
-.cs{font-size:11px;color:var(--t2);margin-top:3px}
-.feed{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto}
-.fi{display:flex;align-items:center;gap:8px;padding:9px 12px;
-  background:var(--s2);border-radius:6px;font-size:11px;border-left:2px solid var(--b)}
+.rv-val.yellow{color:var(--yellow)}
+.rv-val.purple{color:var(--purple)}
+.rv-sub{font-size:9px;color:var(--t3);margin-top:3px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.g8{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--b);border-radius:var(--radius-lg);
+  padding:16px;position:relative;overflow:hidden}
+.card.sm{padding:12px}
+.card.highlight{border-color:var(--blue)}
+.card-accent{position:absolute;top:0;left:0;right:0;height:2px;background:var(--blue)}
+.card-accent.green{background:var(--green)}
+.card-accent.purple{background:var(--purple)}
+.card-accent.red{background:var(--red)}
+.ct{font-size:8px;color:var(--t3);text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:8px;font-weight:600}
+.cv{font-size:24px;font-weight:800;font-family:var(--mono)}
+.cv.g{color:var(--green)}.cv.b{color:var(--bluel)}
+.cv.y{color:var(--yellow)}.cv.p{color:var(--purple)}.cv.r{color:var(--red)}
+.cs{font-size:10px;color:var(--t2);margin-top:3px}
+.cv-sm{font-size:14px;font-weight:700;font-family:var(--mono)}
+
+/* CHAIN CARDS */
+.chain-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cc{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);
+  padding:12px;position:relative;overflow:hidden;transition:.2s}
+.cc:hover{border-color:var(--blue);background:var(--s1)}
+.cc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cc-name{font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--bluel)}
+.cc-badge{font-size:7px;padding:2px 6px;border-radius:10px;font-weight:700;letter-spacing:.5px}
+.cc-badge.live{background:rgba(16,185,129,.15);color:var(--green);border:1px solid var(--greend)}
+.cc-badge.wait{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid var(--yellow)}
+.cc-badge.fail{background:rgba(239,68,68,.1);color:var(--red);border:1px solid var(--red)}
+.cc-badge.deploy{background:rgba(59,130,246,.1);color:var(--bluel);border:1px solid var(--blue)}
+.cc-row{display:flex;justify-content:space-between;align-items:center;
+  font-size:9px;padding:2px 0;border-bottom:1px solid var(--b)}
+.cc-row:last-child{border-bottom:none}
+.cc-label{color:var(--t3)}
+.cc-val{color:var(--t1);font-family:var(--mono);font-size:9px}
+.cc-val.ok{color:var(--green)}.cc-val.no{color:var(--red)}.cc-val.wait{color:var(--yellow)}
+.cc-profit{font-size:13px;font-weight:700;font-family:var(--mono);
+  color:var(--green);margin-top:6px}
+.cc-bar{height:2px;background:var(--b);border-radius:1px;margin-top:6px;overflow:hidden}
+.cc-bar-fill{height:100%;background:var(--green);border-radius:1px;transition:.5s}
+
+/* FEED */
+.feed{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto}
+.fi{display:flex;align-items:center;gap:8px;padding:8px 10px;
+  background:var(--s2);border-radius:var(--radius);font-size:10px;
+  border-left:3px solid var(--b);transition:.15s}
 .fi.ok{border-left-color:var(--green)}
 .fi.fail{border-left-color:var(--red)}
-.fc{font-size:9px;padding:2px 6px;border-radius:3px;
-  background:var(--blueg);color:var(--bluel);font-weight:700;letter-spacing:.5px}
-.fprof{color:var(--green);font-weight:700;font-family:var(--mono);margin-left:auto}
-.fprof.z{color:var(--t3)}
-.chain-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-.cc{background:var(--s2);border:1px solid var(--b);border-radius:8px;padding:12px}
-.cc-name{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--bluel);margin-bottom:8px}
-.cc-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 0}
-.cc-label{color:var(--t3)}
-.cc-val{color:var(--t1);font-family:var(--mono)}
-.cc-val.ok{color:var(--green)}.cc-val.no{color:var(--red)}.cc-val.wait{color:var(--yellow)}
-.tbl{width:100%;border-collapse:collapse;font-size:11px}
-.tbl th{padding:8px 10px;text-align:left;color:var(--t3);font-weight:500;
-  border-bottom:1px solid var(--b);font-size:9px;letter-spacing:1px;text-transform:uppercase}
-.tbl td{padding:9px 10px;border-bottom:1px solid var(--b);font-family:var(--mono)}
-.tbl tr:hover td{background:var(--s2)}
-.badge{font-size:9px;padding:2px 7px;border-radius:3px}
+.fi.miss{border-left-color:var(--yellow)}
+.fc{font-size:8px;padding:2px 5px;border-radius:3px;
+  background:var(--blueg);color:var(--bluel);font-weight:700;
+  letter-spacing:.5px;flex-shrink:0}
+.ft{color:var(--t2)}
+.fb{color:var(--t3);font-family:var(--mono)}
+.fp{color:var(--green);font-weight:700;font-family:var(--mono);margin-left:auto;flex-shrink:0}
+.fp.neg{color:var(--red)}
+.fp.miss{color:var(--yellow)}
+
+/* BORROWER TABLE */
+.btbl{width:100%;border-collapse:collapse;font-size:10px}
+.btbl th{padding:7px 10px;text-align:left;color:var(--t3);font-weight:600;
+  border-bottom:1px solid var(--b);font-size:8px;letter-spacing:1px;
+  text-transform:uppercase;background:var(--s2)}
+.btbl td{padding:7px 10px;border-bottom:1px solid var(--b);font-family:var(--mono)}
+.btbl tr:hover td{background:var(--s2)}
+.btbl tr.danger td{background:rgba(239,68,68,.05)}
+.btbl tr.warning td{background:rgba(245,158,11,.05)}
+.hf-bar{height:3px;background:var(--b);border-radius:2px;margin-top:3px;width:60px}
+.hf-fill{height:100%;border-radius:2px}
+
+/* HF COLOR CODING */
+.hf-0{color:var(--red);font-weight:800}
+.hf-1{color:var(--yellow);font-weight:700}
+.hf-2{color:var(--t1)}
+.hf-3{color:var(--green)}
+
+/* BADGES */
+.badge{font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.5px}
 .bs{background:rgba(16,185,129,.12);color:var(--green)}
 .bf{background:rgba(239,68,68,.12);color:var(--red)}
 .bp{background:rgba(245,158,11,.12);color:var(--yellow)}
-.tr-panel{background:var(--s2);border:1px solid var(--blue);border-radius:8px;padding:22px}
-.tr-title{font-size:14px;font-weight:700;color:var(--bluel);letter-spacing:.5px;margin-bottom:4px}
-.tr-sub{font-size:11px;color:var(--t2);margin-bottom:18px}
-.avail{font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green);margin-bottom:16px}
-.inp{width:100%;background:var(--s1);border:1px solid var(--b);border-radius:6px;
-  padding:11px 14px;color:var(--t1);font-size:15px;font-family:var(--mono);
-  outline:none;transition:.2s;margin-bottom:10px}
-.inp:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blueg)}
-.qrow{display:flex;gap:6px;margin-bottom:12px}
-.q{flex:1;padding:8px;background:var(--s1);border:1px solid var(--b);
-  border-radius:5px;color:var(--t2);font-size:11px;cursor:pointer;transition:.15s}
-.q:hover{border-color:var(--blue);color:var(--bluel)}
-.btn{width:100%;padding:13px;background:var(--blue);border:none;
-  border-radius:6px;color:#fff;font-size:13px;font-weight:700;
-  cursor:pointer;transition:.15s;letter-spacing:1px;text-transform:uppercase}
+.bbl{background:rgba(59,130,246,.12);color:var(--bluel)}
+
+/* CONTROLS */
+.ctrl-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{padding:9px 16px;background:var(--blue);border:none;
+  border-radius:var(--radius);color:#fff;font-size:11px;font-weight:700;
+  cursor:pointer;transition:.15s;letter-spacing:.5px;text-transform:uppercase;
+  font-family:inherit}
 .btn:hover{background:var(--bluel)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:6px 12px;font-size:10px}
+.btn.red{background:rgba(239,68,68,.2);color:var(--red);border:1px solid var(--red)}
+.btn.red:hover{background:var(--red);color:#fff}
+.btn.green{background:rgba(16,185,129,.2);color:var(--green);border:1px solid var(--green)}
+.btn.green:hover{background:var(--green);color:#fff}
+.btn.ghost{background:transparent;color:var(--t2);border:1px solid var(--b)}
+.btn.ghost:hover{border-color:var(--blue);color:var(--bluel)}
+.btn-full{width:100%;padding:13px}
+
+.inp{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);
+  padding:10px 14px;color:var(--t1);font-size:13px;font-family:var(--mono);
+  outline:none;transition:.2s;width:100%}
+.inp:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blueg)}
+.inp-sm{padding:7px 10px;font-size:11px}
+.sel{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);
+  padding:8px 10px;color:var(--t1);font-size:11px;outline:none;cursor:pointer}
+.sel:focus{border-color:var(--blue)}
+
+/* TOGGLE */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;
-  padding:14px;background:var(--s1);border:1px solid var(--b);border-radius:6px;margin-bottom:14px}
-.toggle-label{font-size:12px;font-weight:600}
-.toggle-sub{font-size:10px;color:var(--t2);margin-top:2px}
-.toggle{width:44px;height:24px;background:var(--b);border:none;border-radius:12px;
-  cursor:pointer;position:relative;transition:.2s}
+  padding:12px 14px;background:var(--s2);border:1px solid var(--b);
+  border-radius:var(--radius)}
+.toggle-left{display:flex;flex-direction:column;gap:2px}
+.toggle-label{font-size:12px;font-weight:600;color:var(--t1)}
+.toggle-sub{font-size:10px;color:var(--t2)}
+.toggle{width:40px;height:22px;background:var(--b);border:none;
+  border-radius:11px;cursor:pointer;position:relative;transition:.2s;flex-shrink:0}
 .toggle.on{background:var(--blue)}
-.toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;
-  border-radius:9px;top:3px;left:3px;transition:.2s}
-.toggle.on::after{left:23px}
-.msg{padding:10px 14px;border-radius:6px;font-size:12px;margin-top:8px;display:none}
-.msg.ok{background:rgba(16,185,129,.1);color:var(--green);display:block}
-.msg.er{background:rgba(239,68,68,.1);color:var(--red);display:block}
-.mn{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--s1);
-  border-top:1px solid var(--b);padding:8px 0 env(safe-area-inset-bottom);z-index:100}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;
+  border-radius:8px;top:3px;left:3px;transition:.2s}
+.toggle.on::after{left:21px}
+
+/* MSG */
+.msg{padding:10px 14px;border-radius:var(--radius);font-size:11px;
+  margin-top:8px;display:none;line-height:1.5}
+.msg.ok{background:rgba(16,185,129,.1);color:var(--green);
+  border:1px solid rgba(16,185,129,.2);display:block}
+.msg.er{background:rgba(239,68,68,.1);color:var(--red);
+  border:1px solid rgba(239,68,68,.2);display:block}
+.msg.info{background:var(--blueg);color:var(--bluel);
+  border:1px solid rgba(59,130,246,.2);display:block}
+
+/* BOOTSTRAP CHAIN CARDS */
+.bs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bsc{background:var(--s2);border:1px solid var(--b);border-radius:var(--radius);
+  padding:12px;transition:.2s}
+.bsc.live{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.04)}
+.bsc.waiting{border-color:rgba(245,158,11,.3)}
+.bsc.norpc{opacity:.5}
+.bsc-name{font-size:10px;font-weight:700;letter-spacing:1px;
+  color:var(--bluel);margin-bottom:6px;display:flex;justify-content:space-between}
+.bsc-row{display:flex;justify-content:space-between;font-size:9px;padding:2px 0}
+.bsc-label{color:var(--t3)}
+.bsc-val{font-family:var(--mono);color:var(--t1)}
+
+/* ADDR DISPLAY */
+.addr{font-family:var(--mono);font-size:10px;color:var(--bluel);
+  cursor:pointer;word-break:break-all;line-height:1.6}
+.addr:hover{color:var(--t1)}
+
+/* TREASURY PANEL */
+.tr-panel{background:var(--s2);border:1px solid var(--blue);
+  border-radius:var(--radius-lg);padding:20px}
+.tr-title{font-size:13px;font-weight:700;color:var(--bluel);margin-bottom:3px}
+.tr-sub{font-size:10px;color:var(--t2);margin-bottom:16px}
+.avail-box{background:var(--s1);border:1px solid var(--b);border-radius:var(--radius);
+  padding:14px;margin-bottom:14px;text-align:center}
+.avail-label{font-size:9px;color:var(--t3);letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:4px}
+.avail-val{font-size:28px;font-weight:800;font-family:var(--mono);color:var(--green)}
+.pct-row{display:flex;gap:6px;margin-bottom:10px}
+.pct-btn{flex:1;padding:7px;background:var(--s1);border:1px solid var(--b);
+  border-radius:var(--radius);color:var(--t2);font-size:10px;
+  cursor:pointer;transition:.15s;text-align:center}
+.pct-btn:hover{border-color:var(--blue);color:var(--bluel)}
+
+/* SYSTEM METRICS */
+.metric-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid var(--b);font-size:11px}
+.metric-row:last-child{border-bottom:none}
+.metric-label{color:var(--t2)}
+.metric-val{font-family:var(--mono);color:var(--t1)}
+
+/* APEX */
+.apex-box{background:var(--blueg);border:1px solid rgba(59,130,246,.2);
+  border-radius:var(--radius);padding:14px;line-height:1.7}
+.apex-insight{font-size:13px;color:var(--bluel);margin-bottom:8px}
+.apex-action{font-size:10px;color:var(--t2)}
+.apex-chain{font-size:10px;color:var(--t3);margin-top:6px}
+
+/* PRICE GRID */
+.price-row{display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;border-bottom:1px solid var(--b);font-size:11px}
+.price-row:last-child{border-bottom:none}
+.price-sym{color:var(--t2);font-weight:600}
+.price-val{font-family:var(--mono);color:var(--t1)}
+.price-chg{font-size:9px;padding:1px 5px;border-radius:3px}
+.price-chg.up{background:rgba(16,185,129,.1);color:var(--green)}
+.price-chg.dn{background:rgba(239,68,68,.1);color:var(--red)}
+
+/* DISTRIBUTION BAR */
+.dist-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;margin:4px 0}
+.dist-seg{height:100%;transition:.5s}
+
+/* QUEUE DISPLAY */
+.queue-row{display:flex;gap:8px;align-items:center}
+.queue-badge{padding:4px 10px;border-radius:var(--radius);font-size:10px;font-weight:700}
+.q0{background:rgba(239,68,68,.2);color:var(--red);border:1px solid var(--red)}
+.q1{background:rgba(245,158,11,.2);color:var(--yellow);border:1px solid var(--yellow)}
+.q2{background:rgba(59,130,246,.2);color:var(--bluel);border:1px solid var(--blue)}
+
+/* MOBILE NAV */
+.mn{display:none;position:fixed;bottom:0;left:0;right:0;
+  background:var(--s1);border-top:1px solid var(--b);
+  padding:6px 0 env(safe-area-inset-bottom);z-index:100}
 .mn .tabs{display:flex}
-.mn .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:8px;cursor:pointer;color:var(--t3);font-size:9px;font-weight:500;
-  background:none;border:none;letter-spacing:.5px}
+.mn .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:7px 4px;cursor:pointer;color:var(--t3);font-size:8px;font-weight:500;
+  background:none;border:none;letter-spacing:.5px;transition:.15s}
 .mn .tab.on{color:var(--blue)}
-::-webkit-scrollbar{width:3px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-thumb{background:var(--b);border-radius:2px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--b);margin:4px 0}
+
+/* TX LINK */
+.tx-link{color:var(--bluel);text-decoration:none;font-family:var(--mono);font-size:10px}
+.tx-link:hover{text-decoration:underline}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .chain-grid,.bs-grid{grid-template-columns:repeat(2,1fr)}
+  .g4,.g8{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(2,1fr)}
+}
 @media(max-width:768px){
   .layout{grid-template-columns:1fr}
   .sidebar{display:none}.mn{display:block}
-  .main{padding:14px;padding-bottom:72px}
-  .g4,.g3{grid-template-columns:repeat(2,1fr)}
+  .main{padding:12px;padding-bottom:70px}
   .g2{grid-template-columns:1fr}
-  .chain-grid{grid-template-columns:repeat(2,1fr)}
-  .rev-bar{gap:14px}.rd{display:none}
+  .chain-grid,.bs-grid{grid-template-columns:repeat(2,1fr)}
+  .rev-bar{gap:0}
+  .rv{min-width:calc(50% - 10px);padding:8px 10px;margin-bottom:4px}
 }
 </style>
 </head>
@@ -132,408 +350,1173 @@ nav{flex:1;padding:8px 0}
 <div class="layout">
 <aside class="sidebar">
   <div class="logo-wrap">
-    <div class="logo">X7 PROTOCOL</div>
-    <div class="logo-sub">LIQUIDATION ENGINE</div>
+    <div class="logo">X7</div>
+    <div class="logo-sub">Liquidation Protocol</div>
+    <div class="logo-ver">v2.0 — 8 chains</div>
   </div>
-  <nav>
-    <div class="ni on" onclick="go('overview')">OVERVIEW</div>
-    <div class="ni" onclick="go('executions')">EXECUTIONS</div>
-    <div class="ni" onclick="go('treasury')">TREASURY</div>
-    <div class="ni" onclick="go('system')">SYSTEM</div>
-  </nav>
-  <div class="sb-foot">
-    <div style="font-size:10px;color:var(--t3)">
-      <span class="live-dot"></span>LIVE
+
+  <div class="status-bar">
+    <div class="live-row">
+      <div class="live-dot" id="sys-dot"></div>
+      <span class="live-label" id="sys-status">CONNECTING</span>
+      <span class="uptime-val" id="sb-uptime">0m</span>
     </div>
+    <div style="font-size:9px;color:var(--t3)" id="sb-chains">Loading...</div>
+  </div>
+
+  <nav>
+    <div class="nav-section">Monitor</div>
+    <div class="ni on" onclick="go('overview')">Overview</div>
+    <div class="ni" onclick="go('scanner')">Scanner <span class="ni-badge" id="nb-liq">0</span></div>
+    <div class="ni" onclick="go('executions')">Executions <span class="ni-badge blue" id="nb-exec">0</span></div>
+
+    <div class="nav-section">Finance</div>
+    <div class="ni" onclick="go('treasury')">Treasury</div>
+    <div class="ni" onclick="go('yield')">Yield</div>
+
+    <div class="nav-section">System</div>
+    <div class="ni" onclick="go('bootstrap')">Bootstrap <span class="ni-badge green" id="nb-boot">—</span></div>
+    <div class="ni" onclick="go('system')">System</div>
+    <div class="ni" onclick="go('apex')">Apex AI</div>
+  </nav>
+
+  <div class="sb-stats">
+    <div class="sb-stat">
+      <span class="sb-stat-l">All Time</span>
+      <span class="sb-stat-v green" id="sb-total">$0.00</span>
+    </div>
+    <div class="sb-stat">
+      <span class="sb-stat-l">Today</span>
+      <span class="sb-stat-v green" id="sb-today">$0.00</span>
+    </div>
+    <div class="sb-stat">
+      <span class="sb-stat-l">Borrowers</span>
+      <span class="sb-stat-v blue" id="sb-borrow">0</span>
+    </div>
+    <div class="sb-stat">
+      <span class="sb-stat-l">At Risk</span>
+      <span class="sb-stat-v yellow" id="sb-risk">0</span>
+    </div>
+    <div class="sb-stat">
+      <span class="sb-stat-l">Liquidatable</span>
+      <span class="sb-stat-v" id="sb-liq" style="color:var(--red)">0</span>
+    </div>
+  </div>
+
+  <div class="exec-box">
+    <div class="exec-label">Executor Wallet</div>
+    <div class="exec-addr" id="sb-exec" onclick="copyAddr()" title="Click to copy">—</div>
+    <div class="exec-copy" onclick="copyAddr()">⬡ Click to copy address</div>
   </div>
 </aside>
+
 <main class="main">
 
+<!-- ═══════════════════════════════════════════ OVERVIEW ══ -->
 <div class="page on" id="p-overview">
-  <div class="ph"><div class="pt">OVERVIEW</div><div class="ps">Real-time liquidation engine</div></div>
-  <div class="rev-bar">
-    <div class="rv"><div class="rl">ALL TIME</div><div class="rv-val" id="t-total">$0.00</div></div>
-    <div class="rd"></div>
-    <div class="rv"><div class="rl">TODAY</div><div class="rv-val" id="t-today">$0.00</div></div>
-    <div class="rd"></div>
-    <div class="rv"><div class="rl">ETH PRICE</div><div class="rv-val blue" id="t-eth">--</div></div>
-    <div class="rd"></div>
-    <div class="rv"><div class="rl">BORROWERS</div><div class="rv-val blue" id="t-borrow">0</div></div>
+  <div class="ph">
+    <div class="ph-left">
+      <div class="pt">OVERVIEW</div>
+      <div class="ps">Live liquidation engine — all chains</div>
+    </div>
+    <div class="ph-right">
+      <div style="font-size:10px;color:var(--t3)" id="ov-lastupdate">—</div>
+      <button class="btn sm ghost" onclick="loadOV()">↻ Refresh</button>
+    </div>
   </div>
+
+  <div class="rev-bar">
+    <div class="rv">
+      <div class="rl">All Time Revenue</div>
+      <div class="rv-val" id="t-total">$0.00</div>
+      <div class="rv-sub" id="t-total-sub">across all chains</div>
+    </div>
+    <div class="rv">
+      <div class="rl">Today</div>
+      <div class="rv-val" id="t-today">$0.00</div>
+      <div class="rv-sub" id="t-today-sub">since midnight UTC</div>
+    </div>
+    <div class="rv">
+      <div class="rl">This Week</div>
+      <div class="rv-val" id="t-week">$0.00</div>
+      <div class="rv-sub">7-day total</div>
+    </div>
+    <div class="rv">
+      <div class="rl">Executions</div>
+      <div class="rv-val blue" id="t-execs">0</div>
+      <div class="rv-sub" id="t-wr">0% win rate</div>
+    </div>
+    <div class="rv">
+      <div class="rl">Borrowers Tracked</div>
+      <div class="rv-val blue" id="t-borrow">0</div>
+      <div class="rv-sub" id="t-risk-sub">0 at risk</div>
+    </div>
+    <div class="rv">
+      <div class="rl">Yield Earned</div>
+      <div class="rv-val purple" id="t-yield">$0.00</div>
+      <div class="rv-sub">from Aave supply</div>
+    </div>
+  </div>
+
   <div class="chain-grid" id="chain-grid"></div>
+
   <div class="g2">
     <div class="card">
-      <div class="ct">LIVE EXECUTION FEED</div>
+      <div class="card-accent green"></div>
+      <div class="ct">Live Execution Feed</div>
       <div class="feed" id="feed">
-        <div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">Scanning for liquidatable positions</div>
+        <div style="color:var(--t3);font-size:10px;padding:20px;text-align:center;line-height:2">
+          Scanner active — watching for liquidatable positions<br>
+          <span style="font-size:9px">WebSocket connected to all chains</span>
+        </div>
       </div>
     </div>
-    <div class="card">
-      <div class="ct">APEX INTELLIGENCE</div>
-      <div id="apex-insight" style="font-size:13px;color:var(--bluel);line-height:1.7;margin-bottom:12px">Initializing</div>
-      <div class="ct" style="margin-top:12px">MARKET PRICES</div>
-      <div id="prices-grid"></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="card-accent blue"></div>
+        <div class="ct">Market Prices</div>
+        <div id="prices-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-accent purple"></div>
+        <div class="ct">Position Distribution</div>
+        <div id="hf-dist"></div>
+        <div class="dist-bar" style="margin-top:10px" id="hf-bar">
+          <div class="dist-seg" style="background:var(--red);width:5%"></div>
+          <div class="dist-seg" style="background:var(--yellow);width:10%"></div>
+          <div class="dist-seg" style="background:var(--green);width:85%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:8px;
+          color:var(--t3);margin-top:3px">
+          <span>Liquidatable</span><span>At Risk</span><span>Healthy</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="page" id="p-executions">
-  <div class="ph"><div class="pt">EXECUTIONS</div><div class="ps">All liquidation history</div></div>
-  <div class="g3" style="margin-bottom:16px">
-    <div class="card sm"><div class="ct">TOTAL</div><div class="cv" id="e-total">0</div></div>
-    <div class="card sm"><div class="ct">WIN RATE</div><div class="cv g" id="e-wr">0%</div></div>
-    <div class="card sm"><div class="ct">TOTAL PROFIT</div><div class="cv g" id="e-profit">$0</div></div>
+<!-- ═══════════════════════════════════════════ SCANNER ══ -->
+<div class="page" id="p-scanner">
+  <div class="ph">
+    <div class="ph-left">
+      <div class="pt">SCANNER</div>
+      <div class="ps">Live borrower monitoring — sorted by risk</div>
+    </div>
+    <div class="ph-right">
+      <select class="sel" id="scan-chain-filter" onchange="loadSC()">
+        <option value="">All Chains</option>
+        <option value="polygon">Polygon</option>
+        <option value="arbitrum">Arbitrum</option>
+        <option value="base">Base</option>
+        <option value="optimism">Optimism</option>
+        <option value="bnb">BNB</option>
+        <option value="scroll">Scroll</option>
+        <option value="avalanche">Avalanche</option>
+        <option value="ethereum">Ethereum</option>
+      </select>
+      <select class="sel" id="scan-hf-filter" onchange="loadSC()">
+        <option value="">All HF</option>
+        <option value="danger">Liquidatable (HF &lt; 1.0)</option>
+        <option value="risk">At Risk (HF &lt; 1.2)</option>
+      </select>
+      <button class="btn sm ghost" onclick="loadSC()">↻</button>
+    </div>
   </div>
+
+  <div class="g4">
+    <div class="card sm"><div class="ct">Total Monitored</div>
+      <div class="cv b" id="sc-total">0</div></div>
+    <div class="card sm"><div class="ct">Liquidatable NOW</div>
+      <div class="cv r" id="sc-liq">0</div></div>
+    <div class="card sm"><div class="ct">At Risk (HF &lt; 1.2)</div>
+      <div class="cv y" id="sc-risk">0</div></div>
+    <div class="card sm"><div class="ct">Healthy</div>
+      <div class="cv g" id="sc-safe">0</div></div>
+  </div>
+
   <div class="card">
-    <div class="ct">EXECUTION LOG</div>
+    <div class="ct">Borrower Positions</div>
     <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr><th>CHAIN</th><th>PROTOCOL</th><th>BORROWER</th><th>PROFIT</th><th>STATUS</th><th>TIME</th></tr></thead>
+      <table class="btbl">
+        <thead><tr>
+          <th>Chain</th><th>Address</th><th>Health Factor</th>
+          <th>Collateral</th><th>Debt</th><th>Risk</th><th>Last Checked</th>
+        </tr></thead>
+        <tbody id="scanner-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ EXECUTIONS ══ -->
+<div class="page" id="p-executions">
+  <div class="ph">
+    <div class="ph-left">
+      <div class="pt">EXECUTIONS</div>
+      <div class="ps">Complete liquidation history with profit breakdown</div>
+    </div>
+    <div class="ph-right">
+      <select class="sel" id="ex-chain-filter" onchange="loadEX()">
+        <option value="">All Chains</option>
+        <option value="polygon">Polygon</option>
+        <option value="arbitrum">Arbitrum</option>
+        <option value="base">Base</option>
+        <option value="ethereum">Ethereum</option>
+      </select>
+      <select class="sel" id="ex-status-filter" onchange="loadEX()">
+        <option value="">All Status</option>
+        <option value="success">Success</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="g4">
+    <div class="card sm">
+      <div class="card-accent green"></div>
+      <div class="ct">Total Executions</div>
+      <div class="cv" id="e-total">0</div>
+    </div>
+    <div class="card sm">
+      <div class="card-accent green"></div>
+      <div class="ct">Win Rate</div>
+      <div class="cv g" id="e-wr">0%</div>
+    </div>
+    <div class="card sm">
+      <div class="card-accent green"></div>
+      <div class="ct">Total Profit</div>
+      <div class="cv g" id="e-profit">$0</div>
+    </div>
+    <div class="card sm">
+      <div class="card-accent yellow"></div>
+      <div class="ct">Missed Revenue</div>
+      <div class="cv y" id="e-missed">$0</div>
+      <div class="cs">while waiting for gas</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Execution Log</div>
+    <div style="overflow-x:auto">
+      <table class="btbl">
+        <thead><tr>
+          <th>Chain</th><th>Protocol</th><th>Borrower</th>
+          <th>Collateral</th><th>Debt Asset</th>
+          <th>Gross Profit</th><th>Gas Cost</th><th>Net Profit</th>
+          <th>HF</th><th>Status</th><th>TX</th><th>Time</th>
+        </tr></thead>
         <tbody id="exec-body"></tbody>
       </table>
     </div>
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════ TREASURY ══ -->
 <div class="page" id="p-treasury">
-  <div class="ph"><div class="pt">TREASURY</div><div class="ps">Revenue and Wave withdrawal</div></div>
-  <div class="g2">
-    <div>
-      <div class="card" style="margin-bottom:14px">
-        <div class="ct">REVENUE BREAKDOWN</div>
-        <div class="cv g" id="tr-total">$0.00</div>
-        <div class="cs">all time</div>
-        <div style="margin-top:14px" id="tr-chains"></div>
-      </div>
-      <div class="card">
-        <div class="ct">YIELD DEPLOYED</div>
-        <div id="tr-yield" style="font-size:12px;color:var(--t2)">Aave supply active on Polygon, Arbitrum, Avalanche</div>
+  <div class="ph">
+    <div class="ph-left"><div class="pt">TREASURY</div>
+      <div class="ps">Revenue management and Wave withdrawal</div></div>
+  </div>
+
+  <div class="g3">
+    <div class="card">
+      <div class="card-accent green"></div>
+      <div class="ct">Total Revenue</div>
+      <div class="cv g" id="tr-total">$0.00</div>
+      <div class="cs">all time, all chains</div>
+    </div>
+    <div class="card">
+      <div class="card-accent blue"></div>
+      <div class="ct">Available to Withdraw</div>
+      <div class="cv b" id="tr-avail">$0.00</div>
+      <div class="cs">after working reserve</div>
+    </div>
+    <div class="card">
+      <div class="card-accent purple"></div>
+      <div class="ct">Auto-Withdraw</div>
+      <div style="margin-top:8px">
+        <div class="toggle-row">
+          <div class="toggle-left">
+            <div class="toggle-label">Auto Partial</div>
+            <div class="toggle-sub">30% every $500</div>
+          </div>
+          <button class="toggle" id="auto-toggle" onclick="toggleAuto()"></button>
+        </div>
       </div>
     </div>
+  </div>
+
+  <div class="g2">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="ct">Revenue by Chain</div>
+        <div id="tr-chains"></div>
+      </div>
+      <div class="card">
+        <div class="ct">Recent Withdrawals</div>
+        <div id="wd-hist"></div>
+      </div>
+    </div>
+
     <div class="tr-panel">
-      <div class="tr-title">WITHDRAWAL</div>
-      <div class="tr-sub">Transfer USDC to Wave — arrives in GMD</div>
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-label">AUTO PARTIAL</div>
-          <div class="toggle-sub">Withdraw 30% every $500 earned</div>
-        </div>
-        <button class="toggle" id="auto-toggle" onclick="toggleAuto()"></button>
+      <div class="tr-title">Withdraw to Wave</div>
+      <div class="tr-sub">USDC → Modem Pay relay → Wave Mobile Money → GMD</div>
+      <div class="avail-box">
+        <div class="avail-label">Available Balance</div>
+        <div class="avail-val">$<span id="wd-avail">0.00</span></div>
       </div>
-      <div class="avail">AVAILABLE: <span id="wd-avail">$0.00</span></div>
-      <input class="inp" type="number" id="wd-amt" placeholder="Amount (USDC)" min="1" step="0.01">
-      <div class="qrow">
-        <button class="q" onclick="pct(25)">25%</button>
-        <button class="q" onclick="pct(50)">50%</button>
-        <button class="q" onclick="pct(75)">75%</button>
-        <button class="q" onclick="pct(100)">MAX</button>
+      <input class="inp" type="number" id="wd-amt"
+        placeholder="Amount in USDC" min="1" step="0.01" style="margin-bottom:8px">
+      <div class="pct-row">
+        <div class="pct-btn" onclick="pct(25)">25%</div>
+        <div class="pct-btn" onclick="pct(50)">50%</div>
+        <div class="pct-btn" onclick="pct(75)">75%</div>
+        <div class="pct-btn" onclick="pct(100)">MAX</div>
       </div>
-      <button class="btn" id="wd-btn" onclick="doWithdraw()">WITHDRAW TO WAVE</button>
-      <div style="font-size:10px;color:var(--t3);margin-top:8px">Modem Pay relay — Wave Mobile Money — GMD — 5-10 minutes</div>
+      <button class="btn btn-full" id="wd-btn" onclick="doWithdraw()">
+        WITHDRAW TO WAVE
+      </button>
+      <div style="font-size:9px;color:var(--t3);margin-top:8px;text-align:center">
+        Modem Pay → Wave Mobile Money → GMD — 5-10 minutes
+      </div>
       <div class="msg" id="wd-msg"></div>
-      <div style="margin-top:14px" id="wd-hist"></div>
     </div>
   </div>
 </div>
 
-<div class="page" id="p-system">
-  <div class="ph"><div class="pt">SYSTEM</div><div class="ps">Runtime metrics</div></div>
-  <div class="g4" style="margin-bottom:16px">
-    <div class="card sm"><div class="ct">UPTIME</div><div class="cv b" id="sys-up">0m</div></div>
-    <div class="card sm"><div class="ct">MEMORY</div><div class="cv b" id="sys-mem">0 MB</div></div>
-    <div class="card sm"><div class="ct">DB STATUS</div><div class="cv g" id="sys-db">--</div></div>
-    <div class="card sm"><div class="ct">EXECUTOR</div><div class="cv" id="sys-exec" style="font-size:11px">--</div></div>
+<!-- ══════════════════════════════════════════════ YIELD ══ -->
+<div class="page" id="p-yield">
+  <div class="ph">
+    <div class="ph-left"><div class="pt">YIELD</div>
+      <div class="ps">Idle USDC deployed to Aave — earning while waiting</div></div>
   </div>
+
+  <div class="g4">
+    <div class="card sm"><div class="ct">Total Deployed</div>
+      <div class="cv b" id="yd-deployed">$0</div></div>
+    <div class="card sm"><div class="ct">Daily Yield</div>
+      <div class="cv g" id="yd-daily">$0.00</div></div>
+    <div class="card sm"><div class="ct">Avg APY</div>
+      <div class="cv p" id="yd-apy">~5%</div></div>
+    <div class="card sm"><div class="ct">Working Reserve</div>
+      <div class="cv y" id="yd-reserve">$500</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Yield by Chain</div>
+    <div id="yd-chains"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ BOOTSTRAP ══ -->
+<div class="page" id="p-bootstrap">
+  <div class="ph">
+    <div class="ph-left"><div class="pt">BOOTSTRAP</div>
+      <div class="ps">Autonomous deployment — send gas to unlock each chain</div></div>
+    <div class="ph-right">
+      <button class="btn sm ghost" onclick="loadBS()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="card highlight">
+    <div class="card-accent blue"></div>
+    <div class="ct">Executor Wallet — Send Gas Here</div>
+    <div class="addr" id="bs-exec" onclick="copyAddr()">Loading...</div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn sm" onclick="copyAddr()">Copy Address</button>
+      <div style="font-size:10px;color:var(--t2);align-self:center">
+        Send <strong style="color:var(--green)">0.01 POL</strong> on Polygon to start.
+        System deploys instantly, then funds other chains from profits.
+      </div>
+    </div>
+  </div>
+
   <div class="g2">
     <div class="card">
-      <div class="ct">CONTRACT ADDRESSES</div>
-      <div id="sys-contracts" style="font-size:11px;font-family:var(--mono);color:var(--t2)"></div>
+      <div class="ct">Missed Revenue While Waiting</div>
+      <div id="bs-missed"></div>
     </div>
     <div class="card">
-      <div class="ct">WIN RATES</div>
-      <div id="sys-wr" style="font-size:12px"></div>
+      <div class="ct">Deployment Progress</div>
+      <div id="bs-progress"></div>
     </div>
   </div>
-  <div class="card" style="margin-top:14px">
-    <div class="ct">APEX LOG</div>
-    <div style="max-height:250px;overflow-y:auto" id="sys-log"></div>
+
+  <div class="bs-grid" id="bs-chains"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════ SYSTEM ══ -->
+<div class="page" id="p-system">
+  <div class="ph">
+    <div class="ph-left"><div class="pt">SYSTEM</div>
+      <div class="ps">Runtime metrics, queue status, configuration</div></div>
+    <div class="ph-right">
+      <button class="btn sm ghost" onclick="loadSY()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="g4">
+    <div class="card sm"><div class="ct">Uptime</div>
+      <div class="cv b" id="sys-up">0m</div></div>
+    <div class="card sm"><div class="ct">Memory</div>
+      <div class="cv b" id="sys-mem">0 MB</div></div>
+    <div class="card sm"><div class="ct">DB Status</div>
+      <div class="cv g" id="sys-db">—</div></div>
+    <div class="card sm"><div class="ct">Active Chains</div>
+      <div class="cv b" id="sys-active">0</div></div>
+  </div>
+
+  <div class="g3">
+    <div class="card">
+      <div class="ct">Execution Queue</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+        <div class="queue-row">
+          <div class="queue-badge q0" id="q-tier0">TIER 0: 0</div>
+          <div style="font-size:9px;color:var(--t3)">HF &lt; 0.85 — max profit</div>
+        </div>
+        <div class="queue-row">
+          <div class="queue-badge q1" id="q-tier1">TIER 1: 0</div>
+          <div style="font-size:9px;color:var(--t3)">HF &lt; 0.95 — 100% close</div>
+        </div>
+        <div class="queue-row">
+          <div class="queue-badge q2" id="q-tier2">TIER 2: 0</div>
+          <div style="font-size:9px;color:var(--t3)">HF &lt; 1.0 — 50% close</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Contract Addresses</div>
+      <div id="sys-contracts"></div>
+    </div>
+    <div class="card">
+      <div class="ct">Chain Gas Prices</div>
+      <div id="sys-gas"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Environment Variables</div>
+    <div id="sys-env"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ APEX AI ══ -->
+<div class="page" id="p-apex">
+  <div class="ph">
+    <div class="ph-left"><div class="pt">APEX INTELLIGENCE</div>
+      <div class="ps">Claude AI decision engine — market analysis and direction</div></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-accent blue"></div>
+      <div class="ct">Current Directive</div>
+      <div class="apex-box" id="apex-main">
+        <div class="apex-insight" id="apex-insight">Initializing...</div>
+        <div class="apex-action" id="apex-action">—</div>
+        <div class="apex-chain" id="apex-chain">Priority chain: —</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-accent purple"></div>
+      <div class="ct">Win Rate Intelligence</div>
+      <div id="apex-wr"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ct">Decision Log</div>
+    <div style="max-height:320px;overflow-y:auto" id="apex-log"></div>
   </div>
 </div>
 
 </main>
 </div>
 
+<!-- MOBILE NAV -->
 <div class="mn">
   <div class="tabs">
-    <button class="tab on" onclick="go('overview')">OVERVIEW</button>
-    <button class="tab" onclick="go('executions')">EXECUTE</button>
-    <button class="tab" onclick="go('treasury')">TREASURY</button>
-    <button class="tab" onclick="go('system')">SYSTEM</button>
+    <button class="tab on" onclick="go('overview')">Overview</button>
+    <button class="tab" onclick="go('scanner')">Scanner</button>
+    <button class="tab" onclick="go('bootstrap')">Bootstrap</button>
+    <button class="tab" onclick="go('treasury')">Treasury</button>
+    <button class="tab" onclick="go('system')">System</button>
   </div>
 </div>
 
 <script>
-var _avail=0,_auto=false;
-(function(){
-  var p=location.protocol==='https:'?'wss:':'ws:';
-  var s=new WebSocket(p+'//'+location.host);
+var _avail=0,_auto=false,_execAddr='',_wsConnected=false
+var _tier0=0,_tier1=0,_tier2=0
+
+// WEBSOCKET
+;(function(){
+  var proto=location.protocol==='https:'?'wss:':'ws:'
+  var s=new WebSocket(proto+'//'+location.host)
+  s.onopen=function(){_wsConnected=true;updateSysStatus()}
   s.onmessage=function(e){
     try{
-      var d=JSON.parse(e.data);
-      if(d.type==='tick'){set('t-total',fmt(d.data.revenue));set('t-today',fmt(d.data.today));}
-      if(d.type==='withdrawal'){showMsg('Transfer sent to Wave','ok');}
-      if(d.type==='auto_withdraw_toggle'){_auto=d.data.enabled;renderToggle();}
+      var d=JSON.parse(e.data)
+      if(d.type==='tick'){
+        set('t-total',fmt(d.data.revenue))
+        set('t-today',fmt(d.data.today))
+        set('sb-total',fmt(d.data.revenue))
+        set('sb-today',fmt(d.data.today))
+      }
+      if(d.type==='opportunity'){
+        if(d.data.tier===0)_tier0++
+        else if(d.data.tier===1)_tier1++
+        else _tier2++
+        updateQueueBadges()
+        set('nb-liq',_tier0+_tier1+_tier2)
+      }
+      if(d.type==='execution'){
+        _tier0=Math.max(0,_tier0-1)
+        updateQueueBadges()
+        addFeedItem(d.data)
+        set('nb-exec',(parseInt(document.getElementById('nb-exec').textContent||0)+1))
+      }
+      if(d.type==='missed'){
+        addMissedItem(d.data)
+      }
+      if(d.type==='bootstrap_tick'){
+        updateBootstrapBadge(d.data)
+      }
+      if(d.type==='withdrawal'){showMsg('Transfer sent to Wave','ok')}
+      if(d.type==='auto_withdraw_toggle'){_auto=d.data.enabled;renderToggle()}
+      if(d.type==='deploy_success'){
+        showNotif(d.data.chain.toUpperCase()+' contract deployed!')
+      }
     }catch(ex){}
-  };
-  s.onclose=function(){setTimeout(function(){location.reload();},4000);};
-})();
+  }
+  s.onclose=function(){
+    _wsConnected=false
+    updateSysStatus()
+    setTimeout(function(){location.reload()},5000)
+  }
+})()
 
+function updateSysStatus(){
+  var dot=document.getElementById('sys-dot')
+  var lbl=document.getElementById('sys-status')
+  if(dot&&lbl){
+    if(_wsConnected){dot.className='live-dot';lbl.textContent='LIVE'}
+    else{dot.className='live-dot red';lbl.textContent='RECONNECTING'}
+  }
+}
+
+function updateQueueBadges(){
+  set('q-tier0','TIER 0: '+_tier0)
+  set('q-tier1','TIER 1: '+_tier1)
+  set('q-tier2','TIER 2: '+_tier2)
+}
+
+function updateBootstrapBadge(data){
+  if(!data||!data.chains)return
+  var live=Object.values(data.chains).filter(function(c){return c.status==='live'}).length
+  var total=Object.keys(data.chains).length
+  set('nb-boot',live+'/'+total)
+}
+
+// NAV
 function go(id){
-  var pages=document.querySelectorAll('.page,.ni,.tab');
-  for(var i=0;i<pages.length;i++) pages[i].classList.remove('on');
-  var pg=document.getElementById('p-'+id);
-  if(pg) pg.classList.add('on');
-  var els=document.querySelectorAll('[onclick="go(\''+id+'\')"]');
-  for(var j=0;j<els.length;j++) els[j].classList.add('on');
-  load(id);
+  document.querySelectorAll('.page,.ni,.tab').forEach(function(el){el.classList.remove('on')})
+  var pg=document.getElementById('p-'+id)
+  if(pg)pg.classList.add('on')
+  document.querySelectorAll('[onclick="go(\''+id+'\')"]').forEach(function(el){
+    el.classList.add('on')
+  })
+  load(id)
 }
 
-function api(p){return fetch(p).then(function(r){return r.json();}).catch(function(){return null;});}
+// API
+function api(p){
+  return fetch(p).then(function(r){return r.json()}).catch(function(){return null})
+}
 
+// FORMAT
 function fmt(n){
-  var v=parseFloat(n)||0;
-  if(v>=1e6) return '$'+(v/1e6).toFixed(2)+'M';
-  if(v>=1e3) return '$'+(v/1e3).toFixed(1)+'K';
-  return '$'+v.toFixed(2);
+  var v=parseFloat(n)||0
+  if(v>=1000000)return '$'+(v/1000000).toFixed(2)+'M'
+  if(v>=1000)return '$'+(v/1000).toFixed(1)+'K'
+  return '$'+v.toFixed(2)
 }
+function fmtAddr(a){return a?a.slice(0,8)+'...'+a.slice(-6):'—'}
 function ago(ts){
-  var s=Math.floor((Date.now()-ts*1000)/1000);
-  if(s<60) return s+'s';
-  if(s<3600) return Math.floor(s/60)+'m';
-  return Math.floor(s/3600)+'h';
+  var s=Math.floor((Date.now()-ts*1000)/1000)
+  if(s<60)return s+'s ago'
+  if(s<3600)return Math.floor(s/60)+'m ago'
+  if(s<86400)return Math.floor(s/3600)+'h ago'
+  return Math.floor(s/86400)+'d ago'
 }
-function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+function hfColor(hf){
+  if(hf<0.85)return 'hf-0'
+  if(hf<1.0)return 'hf-1'
+  if(hf<1.2)return 'hf-2'
+  return 'hf-3'
+}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v}
 function renderToggle(){
-  var t=document.getElementById('auto-toggle');
-  if(t){t.className='toggle'+(_auto?' on':'');}
+  var t=document.getElementById('auto-toggle')
+  if(t)t.className='toggle'+(_auto?' on':'')
+}
+function copyAddr(){
+  if(_execAddr){
+    navigator.clipboard.writeText(_execAddr).then(function(){
+      showNotif('Address copied!')
+    })
+  }
+}
+function showNotif(msg){
+  var n=document.createElement('div')
+  n.textContent=msg
+  n.style.cssText='position:fixed;top:20px;right:20px;background:var(--blue);color:#fff;'+
+    'padding:10px 16px;border-radius:6px;font-size:12px;z-index:9999;'+
+    'animation:slideIn .3s ease;box-shadow:0 4px 20px rgba(0,0,0,.5)'
+  document.body.appendChild(n)
+  setTimeout(function(){n.remove()},3000)
 }
 
+// LOAD DISPATCHER
 function load(page){
-  if(page==='overview')   loadOV();
-  if(page==='executions') loadEX();
-  if(page==='treasury')   loadTR();
-  if(page==='system')     loadSY();
+  if(page==='overview')loadOV()
+  if(page==='scanner')loadSC()
+  if(page==='executions')loadEX()
+  if(page==='treasury')loadTR()
+  if(page==='yield')loadYD()
+  if(page==='bootstrap')loadBS()
+  if(page==='system')loadSY()
+  if(page==='apex')loadAP()
 }
 
+// ── OVERVIEW ──────────────────────────────────────────────
 function loadOV(){
   api('/api/overview').then(function(d){
-    if(!d||d.initializing) return;
-    set('t-total',fmt(d.totalRevenue));
-    set('t-today',fmt(d.todayRevenue));
-    set('t-borrow',(d.borrowers||0).toLocaleString());
-    var p=d.prices||{};
-    set('t-eth',p.ETH?'$'+Number(p.ETH).toLocaleString():'--');
-    _auto=d.autoWithdraw; renderToggle();
-    var cg=document.getElementById('chain-grid');
+    if(!d||d.initializing)return
+    set('t-total',fmt(d.totalRevenue))
+    set('t-today',fmt(d.todayRevenue))
+    set('t-week',fmt(d.weekRevenue||0))
+    set('t-execs',d.stats&&d.stats.total?d.stats.total:0)
+    set('t-wr',d.stats&&d.stats.winRate?d.stats.winRate:'0%')
+    set('t-borrow',d.borrowers||0)
+    set('t-yield',fmt(d.totalYield||0))
+    set('sb-total',fmt(d.totalRevenue))
+    set('sb-today',fmt(d.todayRevenue))
+    set('sb-borrow',d.borrowers||0)
+    set('sb-risk',d.atRisk||0)
+    set('sb-liq',d.liquidatable||0)
+    set('t-risk-sub',(d.atRisk||0)+' at risk · '+(d.liquidatable||0)+' liquidatable')
+    set('ov-lastupdate','Updated '+new Date().toLocaleTimeString())
+
+    if(d.executor){
+      _execAddr=d.executor
+      set('sb-exec',fmtAddr(d.executor))
+      set('bs-exec',d.executor)
+    }
+
+    // Chain grid
+    var cg=document.getElementById('chain-grid')
     if(cg&&d.chains){
-      var html='';
-      var chainKeys=Object.keys(d.chains);
-      for(var i=0;i<chainKeys.length;i++){
-        var c=chainKeys[i];
-        var info=d.chains[c];
-        var ws=info.ws||'starting';
-        var ct=info.contract||'deploying';
-        var wsSt=ws==='connected'?'ok':ws==='reconnecting'?'wait':'no';
-        var ctSt=(ct&&ct!=='deploying'&&ct!=='failed')?'ok':(ct==='failed'?'no':'wait');
-        var ctDisp=(ct&&ct.length>10)?ct.slice(0,8)+'...':ct;
-        html+='<div class="cc"><div class="cc-name">'+c.toUpperCase()+'</div>';
-        html+='<div class="cc-row"><span class="cc-label">WEBSOCKET</span><span class="cc-val '+wsSt+'">'+ws+'</span></div>';
-        html+='<div class="cc-row"><span class="cc-label">CONTRACT</span><span class="cc-val '+ctSt+'">'+ctDisp+'</span></div>';
-        html+='<div class="cc-row"><span class="cc-label">WIN RATE</span><span class="cc-val">'+(parseFloat(info.wr_aave||0.4)*100).toFixed(0)+'%</span></div>';
-        html+='<div class="cc-row"><span class="cc-label">YIELD</span><span class="cc-val ok">$'+parseFloat(info.yield||0).toFixed(0)+'</span></div>';
-        html+='</div>';
-      }
-      cg.innerHTML=html;
+      cg.innerHTML=Object.entries(d.chains).map(function(entry){
+        var name=entry[0],c=entry[1]
+        var ws=c.ws||'starting'
+        var ct=c.contract||'waiting'
+        var status=ct.startsWith('0x')?'live':ct==='deploying'?'deploy':ct==='failed'?'fail':'wait'
+        var statusLabel=status==='live'?'LIVE':status==='deploying'?'DEPLOYING':
+          status==='failed'?'FAILED':'WAITING'
+        var profit24=c.profit24||0
+        var maxProfit=50
+        var pctFill=Math.min((profit24/maxProfit)*100,100)
+        return '<div class="cc">'+
+          '<div class="cc-top">'+
+          '<div class="cc-name">'+name.toUpperCase()+'</div>'+
+          '<div class="cc-badge '+status+'">'+statusLabel+'</div>'+
+          '</div>'+
+          '<div class="cc-row"><span class="cc-label">WS</span>'+
+          '<span class="cc-val '+(ws==='connected'?'ok':ws==='reconnecting'?'wait':'no')+'">'+ws+'</span></div>'+
+          '<div class="cc-row"><span class="cc-label">Contract</span>'+
+          '<span class="cc-val '+(ct.startsWith('0x')?'ok':ct==='failed'?'no':'wait')+'">'+
+          (ct.startsWith('0x')?ct.slice(0,8)+'...':ct)+'</span></div>'+
+          '<div class="cc-row"><span class="cc-label">Win Rate</span>'+
+          '<span class="cc-val">'+Math.round(parseFloat(c.wr_aave||0.4)*100)+'%</span></div>'+
+          '<div class="cc-row"><span class="cc-label">Borrowers</span>'+
+          '<span class="cc-val">'+( c.borrowers||0)+'</span></div>'+
+          '<div class="cc-profit">'+fmt(profit24)+'</div>'+
+          '<div class="cc-bar"><div class="cc-bar-fill" style="width:'+pctFill+'%"></div></div>'+
+          '</div>'
+      }).join('')
     }
-    var fe=document.getElementById('feed');
+
+    // Feed
+    var fe=document.getElementById('feed')
     if(fe&&d.recentExecutions&&d.recentExecutions.length>0){
-      var fhtml='';
-      for(var k=0;k<d.recentExecutions.length;k++){
-        var ex=d.recentExecutions[k];
-        var ok=ex.status==='success';
-        fhtml+='<div class="fi '+(ok?'ok':'fail')+'">';
-        fhtml+='<span class="fc">'+((ex.chain||'?').toUpperCase().slice(0,3))+'</span>';
-        fhtml+='<span style="color:var(--t2)">'+(ex.protocol||'aave')+'</span>';
-        fhtml+='<span style="color:var(--t3)">'+(ex.borrower?ex.borrower.slice(0,10)+'...':'')+'</span>';
-        fhtml+='<span class="fprof '+(ex.profit_usdc>0?'':'z')+'">'+(ex.profit_usdc>0?'+'+fmt(ex.profit_usdc):ex.status)+'</span>';
-        fhtml+='</div>';
-      }
-      fe.innerHTML=fhtml;
+      fe.innerHTML=d.recentExecutions.map(function(ex){
+        var ok=ex.status==='success'
+        return '<div class="fi '+(ok?'ok':'fail')+'">'+
+          '<span class="fc">'+((ex.chain||'?').toUpperCase().slice(0,3))+'</span>'+
+          '<span class="ft">'+(ex.protocol||'aave')+'</span>'+
+          '<span class="fb">'+(ex.borrower?ex.borrower.slice(0,10)+'...':'')+'</span>'+
+          '<span class="fp '+(ok&&ex.profit_usdc>0?'':'neg')+'">'+
+          (ok&&ex.profit_usdc>0?'+'+fmt(ex.profit_usdc):ex.status)+'</span>'+
+          '</div>'
+      }).join('')
     }
-    set('apex-insight',d.apex&&d.apex.insight?d.apex.insight:'Scanning');
-    var pg=document.getElementById('prices-grid');
-    if(pg){
-      var phtml='';
-      var pkeys=['ETH','BTC','MATIC','LINK','AVAX'];
-      for(var m=0;m<pkeys.length;m++){
-        var pk=pkeys[m];
-        if(p[pk]){
-          phtml+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:1px solid var(--b)">';
-          phtml+='<span style="color:var(--t3)">'+pk+'</span>';
-          phtml+='<span style="font-family:var(--mono)">$'+Number(p[pk]).toLocaleString()+'</span>';
-          phtml+='</div>';
-        }
-      }
-      pg.innerHTML=phtml;
+
+    // Prices
+    var pg=document.getElementById('prices-grid')
+    if(pg&&d.prices){
+      var p=d.prices
+      pg.innerHTML=['ETH','BTC','MATIC','LINK','AVAX','BNB'].filter(function(k){return p[k]}).map(function(k){
+        return '<div class="price-row">'+
+          '<span class="price-sym">'+k+'</span>'+
+          '<span class="price-val">$'+Number(p[k]).toLocaleString()+'</span>'+
+          '</div>'
+      }).join('')
     }
-  });
+
+    // HF Distribution
+    var hfd=document.getElementById('hf-dist')
+    if(hfd){
+      var liq=d.liquidatable||0,risk=d.atRisk||0,total=d.borrowers||1
+      var safe=Math.max(0,total-risk)
+      hfd.innerHTML='<div style="display:flex;gap:12px;font-size:10px">'+
+        '<span style="color:var(--red)">⬤ '+liq+' liquidatable</span>'+
+        '<span style="color:var(--yellow)">⬤ '+(risk-liq)+' at risk</span>'+
+        '<span style="color:var(--green)">⬤ '+safe+' healthy</span>'+
+        '</div>'
+    }
+
+    set('apex-insight',d.apex&&d.apex.insight?d.apex.insight:'Scanning market...')
+  })
 }
 
+// ── SCANNER ───────────────────────────────────────────────
+function loadSC(){
+  var chainF=document.getElementById('scan-chain-filter')
+  var hfF=document.getElementById('scan-hf-filter')
+  var chain=chainF?chainF.value:''
+  var hfFilter=hfF?hfF.value:''
+
+  var url='/api/scanner'+(chain?'?chain='+chain:'')
+  api(url).then(function(d){
+    if(!d)return
+    set('sc-total',d.total||0)
+    set('sc-liq',d.liquidatable||0)
+    set('sc-risk',d.atRisk||0)
+    set('sc-safe',d.safe||0)
+    set('nb-liq',d.liquidatable||0)
+
+    var tb=document.getElementById('scanner-body')
+    if(!tb)return
+    var rows=d.borrowers||[]
+    if(hfFilter==='danger')rows=rows.filter(function(r){return r.health_factor<1.0})
+    if(hfFilter==='risk')rows=rows.filter(function(r){return r.health_factor<1.2})
+
+    if(rows.length===0){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:20px">'+
+        'No positions match filter</td></tr>'
+      return
+    }
+    tb.innerHTML=rows.map(function(r){
+      var hf=parseFloat(r.health_factor||999)
+      var rowClass=hf<1?'danger':hf<1.2?'warning':''
+      var hfClass=hfColor(hf)
+      var hfPct=Math.min((hf/2)*100,100)
+      var hfBarColor=hf<1?'var(--red)':hf<1.2?'var(--yellow)':'var(--green)'
+      return '<tr class="'+rowClass+'">'+
+        '<td><span class="fc">'+(r.chain||'?').toUpperCase().slice(0,3)+'</span></td>'+
+        '<td class="addr" title="'+r.address+'">'+fmtAddr(r.address)+'</td>'+
+        '<td><span class="'+hfClass+'">'+hf.toFixed(4)+'</span>'+
+        '<div class="hf-bar"><div class="hf-fill" style="width:'+hfPct+'%;background:'+hfBarColor+'"></div></div></td>'+
+        '<td>$'+Number(r.collateral_usd||0).toFixed(0)+'</td>'+
+        '<td>$'+Number(r.debt_usd||0).toFixed(0)+'</td>'+
+        '<td><span class="badge '+(hf<1?'bf':hf<1.2?'bp':'bs')+'">'+(hf<1?'LIQUIDATABLE':hf<1.2?'AT RISK':'HEALTHY')+'</span></td>'+
+        '<td style="color:var(--t3)">'+ago(r.last_checked)+'</td>'+
+        '</tr>'
+    }).join('')
+  })
+}
+
+// ── EXECUTIONS ────────────────────────────────────────────
 function loadEX(){
+  var chainF=document.getElementById('ex-chain-filter')
+  var statusF=document.getElementById('ex-status-filter')
+  var chain=chainF?chainF.value:''
+  var status=statusF?statusF.value:''
+
   api('/api/executions').then(function(d){
-    if(!d) return;
-    set('e-total',d.stats&&d.stats.total?d.stats.total:0);
-    set('e-wr',d.stats&&d.stats.winRate?d.stats.winRate:'0%');
-    set('e-profit',fmt(d.stats&&d.stats.profit?d.stats.profit:0));
-    var tb=document.getElementById('exec-body');
-    if(tb){
-      if(!d.executions||d.executions.length===0){
-        tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:20px">No executions yet</td></tr>';
-        return;
-      }
-      var rhtml='';
-      for(var i=0;i<d.executions.length;i++){
-        var e=d.executions[i];
-        var bs=e.status==='success'?'bs':(e.status==='failed'?'bf':'bp');
-        rhtml+='<tr>';
-        rhtml+='<td><span class="fc">'+((e.chain||'?').toUpperCase().slice(0,3))+'</span></td>';
-        rhtml+='<td style="color:var(--t2)">'+(e.protocol||'aave')+'</td>';
-        rhtml+='<td style="color:var(--t3)">'+(e.borrower?e.borrower.slice(0,14)+'...':'--')+'</td>';
-        rhtml+='<td style="color:var(--green)">'+fmt(e.profit_usdc)+'</td>';
-        rhtml+='<td><span class="badge '+bs+'">'+e.status+'</span></td>';
-        rhtml+='<td style="color:var(--t3)">'+(e.created_at?ago(e.created_at):'--')+'</td>';
-        rhtml+='</tr>';
-      }
-      tb.innerHTML=rhtml;
+    if(!d)return
+    set('e-total',d.stats&&d.stats.total?d.stats.total:0)
+    set('e-wr',d.stats&&d.stats.winRate?d.stats.winRate:'0%')
+    set('e-profit',fmt(d.stats&&d.stats.profit?d.stats.profit:0))
+
+    var missed=0
+    if(d.missed)Object.values(d.missed).forEach(function(v){missed+=parseFloat(v)||0})
+    set('e-missed',fmt(missed))
+
+    var tb=document.getElementById('exec-body')
+    if(!tb)return
+    var rows=(d.executions||[]).filter(function(e){
+      if(chain&&e.chain!==chain)return false
+      if(status&&e.status!==status)return false
+      return true
+    })
+    if(rows.length===0){
+      tb.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--t3);padding:20px">No executions yet</td></tr>'
+      return
     }
-  });
+    tb.innerHTML=rows.map(function(e){
+      var bs=e.status==='success'?'bs':e.status==='failed'?'bf':'bp'
+      var explorer=(window._explorers&&window._explorers[e.chain])||'https://polygonscan.com/tx/'
+      return '<tr>'+
+        '<td><span class="fc">'+((e.chain||'?').toUpperCase().slice(0,3))+'</span></td>'+
+        '<td style="color:var(--t2)">'+(e.protocol||'aave')+'</td>'+
+        '<td class="addr" title="'+(e.borrower||'')+'">'+fmtAddr(e.borrower)+'</td>'+
+        '<td>'+(e.collateral_asset?e.collateral_asset.slice(0,8)+'...':'—')+'</td>'+
+        '<td>'+(e.debt_asset?e.debt_asset.slice(0,8)+'...':'—')+'</td>'+
+        '<td style="color:var(--green)">'+fmt(e.profit_usdc)+'</td>'+
+        '<td style="color:var(--red)">'+fmt(e.gas_usdc||0)+'</td>'+
+        '<td style="color:var(--green);font-weight:700">'+fmt((e.profit_usdc||0)-(e.gas_usdc||0))+'</td>'+
+        '<td class="'+(e.hf_at_exec?hfColor(e.hf_at_exec):'')+'">'+
+        (e.hf_at_exec?parseFloat(e.hf_at_exec).toFixed(4):'—')+'</td>'+
+        '<td><span class="badge '+bs+'">'+e.status+'</span></td>'+
+        '<td>'+(e.tx_hash?'<a href="'+explorer+e.tx_hash+'" target="_blank" class="tx-link">'+
+        e.tx_hash.slice(0,10)+'...</a>':'—')+'</td>'+
+        '<td style="color:var(--t3)">'+(e.created_at?ago(e.created_at):'—')+'</td>'+
+        '</tr>'
+    }).join('')
+  })
 }
 
+// ── TREASURY ──────────────────────────────────────────────
 function loadTR(){
   api('/api/treasury').then(function(d){
-    if(!d) return;
-    _avail=d.totalRevenue||0;
-    _auto=d.autoWithdraw||false;
-    renderToggle();
-    set('tr-total',fmt(d.totalRevenue));
-    set('wd-avail',fmt(d.totalRevenue));
-    var ce=document.getElementById('tr-chains');
+    if(!d)return
+    _avail=d.totalRevenue||0
+    _auto=d.autoWithdraw||false
+    renderToggle()
+    set('tr-total',fmt(d.totalRevenue))
+    set('tr-avail',fmt(d.totalRevenue))
+    set('wd-avail',(d.totalRevenue||0).toFixed(2))
+
+    var ce=document.getElementById('tr-chains')
     if(ce&&d.byChain){
-      var chtml='';
-      var ckeys=Object.keys(d.byChain);
-      for(var i=0;i<ckeys.length;i++){
-        var c=ckeys[i];
-        chtml+='<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:1px solid var(--b)">';
-        chtml+='<span style="color:var(--t3)">'+c.toUpperCase()+'</span>';
-        chtml+='<span style="font-family:var(--mono);color:var(--green)">'+fmt(d.byChain[c])+'</span>';
-        chtml+='</div>';
-      }
-      ce.innerHTML=chtml;
+      var total=d.totalRevenue||1
+      ce.innerHTML=Object.entries(d.byChain).map(function(entry){
+        var c=entry[0],v=entry[1]
+        var pct=Math.round((v/total)*100)||0
+        return '<div style="margin-bottom:8px">'+
+          '<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px">'+
+          '<span style="color:var(--t2)">'+c.toUpperCase()+'</span>'+
+          '<span style="font-family:var(--mono);color:var(--green)">'+fmt(v)+
+          ' <span style="color:var(--t3)">('+pct+'%)</span></span></div>'+
+          '<div style="height:4px;background:var(--b);border-radius:2px">'+
+          '<div style="height:100%;width:'+pct+'%;background:var(--green);border-radius:2px"></div>'+
+          '</div></div>'
+      }).join('')
     }
-    var he=document.getElementById('wd-hist');
+
+    var he=document.getElementById('wd-hist')
     if(he&&d.withdrawals&&d.withdrawals.length>0){
-      var whtml='<div style="font-size:9px;color:var(--t3);margin-bottom:8px;letter-spacing:1px">RECENT WITHDRAWALS</div>';
-      for(var j=0;j<Math.min(4,d.withdrawals.length);j++){
-        var w=d.withdrawals[j];
-        var wbs=w.status==='completed'?'bs':(w.status==='failed'?'bf':'bp');
-        whtml+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b);font-size:11px">';
-        whtml+='<span style="font-family:var(--mono)">'+fmt(w.usdc_amount)+'</span>';
-        whtml+='<span style="color:var(--t3)">GMD '+(w.gmd_amount||0).toLocaleString()+'</span>';
-        whtml+='<span class="badge '+wbs+'">'+w.status+'</span>';
-        whtml+='</div>';
-      }
-      he.innerHTML=whtml;
+      he.innerHTML='<div style="font-size:8px;color:var(--t3);letter-spacing:1.5px;margin-bottom:8px">RECENT</div>'+
+        d.withdrawals.slice(0,5).map(function(w){
+          var bs=w.status==='completed'?'bs':w.status==='failed'?'bf':'bp'
+          return '<div class="metric-row">'+
+            '<span style="font-family:var(--mono)">'+fmt(w.usdc_amount)+'</span>'+
+            '<span style="color:var(--t3)">→ '+Math.round(w.gmd_amount||0).toLocaleString()+' GMD</span>'+
+            '<span class="badge '+bs+'">'+w.status+'</span>'+
+            '</div>'
+        }).join('')
+    }else if(he){
+      he.innerHTML='<div style="color:var(--t3);font-size:10px;padding:10px 0">No withdrawals yet</div>'
     }
-  });
+  })
 }
 
+// ── YIELD ──────────────────────────────────────────────────
+function loadYD(){
+  api('/api/overview').then(function(d){
+    if(!d)return
+    var totalYield=0,totalDeployed=0
+    var html=''
+    var chains=['polygon','arbitrum','base','avalanche']
+    chains.forEach(function(c){
+      var deployed=parseFloat(d.chains&&d.chains[c]&&d.chains[c].yield||0)
+      totalDeployed+=deployed
+      var daily=deployed*0.05/365
+      totalYield+=daily
+      html+='<div class="metric-row">'+
+        '<span class="metric-label">'+c.toUpperCase()+'</span>'+
+        '<span class="metric-val">$'+deployed.toFixed(0)+' deployed</span>'+
+        '<span style="color:var(--green);font-size:10px">+$'+daily.toFixed(2)+'/day</span>'+
+        '</div>'
+    })
+    set('yd-deployed','$'+totalDeployed.toFixed(0))
+    set('yd-daily','$'+totalYield.toFixed(2))
+    var yc=document.getElementById('yd-chains')
+    if(yc)yc.innerHTML=html||'<div style="color:var(--t3);font-size:10px;padding:10px 0">No yield deployed yet</div>'
+  })
+}
+
+// ── BOOTSTRAP ─────────────────────────────────────────────
+function loadBS(){
+  api('/api/bootstrap').then(function(d){
+    if(!d)return
+    if(d.execAddr){
+      _execAddr=d.execAddr
+      set('bs-exec',d.execAddr)
+      set('sb-exec',fmtAddr(d.execAddr))
+    }
+
+    var missedTotal=0
+    var missedHtml=''
+    var progressHtml=''
+    var live=0,total=0
+
+    if(d.chains){
+      Object.entries(d.chains).forEach(function(entry){
+        var name=entry[0],c=entry[1]
+        total++
+        if(c.status==='live')live++
+        var m=parseFloat(c.missedProfit||0)
+        missedTotal+=m
+        if(m>0){
+          missedHtml+='<div class="metric-row">'+
+            '<span class="metric-label">'+name.toUpperCase()+'</span>'+
+            '<span class="metric-val" style="color:var(--yellow)">$'+m.toFixed(2)+' missed</span>'+
+            '<span style="color:var(--t3);font-size:9px">'+c.missedCount+' ops</span>'+
+            '</div>'
+        }
+        progressHtml+='<div class="metric-row">'+
+          '<span class="metric-label">'+name.toUpperCase()+'</span>'+
+          '<span class="badge '+(c.status==='live'?'bs':c.status==='waiting'?'bp':'bf')+'">'+
+          c.status.toUpperCase()+'</span>'+
+          '</div>'
+      })
+    }
+
+    var bm=document.getElementById('bs-missed')
+    if(bm){
+      bm.innerHTML=(missedTotal>0?
+        '<div style="font-size:22px;font-weight:800;font-family:var(--mono);color:var(--yellow);margin-bottom:10px">'+
+        '$'+missedTotal.toFixed(2)+' missed</div>':
+        '<div style="color:var(--t3);font-size:10px">No missed liquidations yet</div>')+
+        (missedHtml||'')
+    }
+
+    var bp=document.getElementById('bs-progress')
+    if(bp)bp.innerHTML=
+      '<div style="font-size:14px;font-weight:700;margin-bottom:10px">'+
+      live+' / '+total+' chains live</div>'+
+      progressHtml
+
+    set('nb-boot',live+'/'+total)
+
+    var bc=document.getElementById('bs-chains')
+    if(bc&&d.chains){
+      bc.innerHTML=Object.entries(d.chains).map(function(entry){
+        var name=entry[0],c=entry[1]
+        var statusClass=c.status==='live'?'live':c.hasRpc?'waiting':'norpc'
+        return '<div class="bsc '+statusClass+'">'+
+          '<div class="bsc-name">'+name.toUpperCase()+
+          '<span class="badge '+(c.status==='live'?'bs':c.status==='waiting'?'bp':'bf')+'">'+
+          c.status+'</span></div>'+
+          '<div class="bsc-row"><span class="bsc-label">Balance</span>'+
+          '<span class="bsc-val">'+c.balance+' '+(c.native||'')+'</span></div>'+
+          '<div class="bsc-row"><span class="bsc-label">Need</span>'+
+          '<span class="bsc-val">'+c.needed+' '+(c.native||'')+'</span></div>'+
+          '<div class="bsc-row"><span class="bsc-label">RPC</span>'+
+          '<span class="bsc-val '+(c.hasRpc?'ok':'no')+'">'+(c.hasRpc?'SET':'MISSING')+'</span></div>'+
+          (c.contract&&c.contract.startsWith('0x')?
+          '<div class="bsc-row"><span class="bsc-label">Contract</span>'+
+          '<span class="bsc-val ok">'+c.contract.slice(0,10)+'...</span></div>':'')+'</div>'
+      }).join('')
+    }
+  })
+}
+
+// ── SYSTEM ────────────────────────────────────────────────
 function loadSY(){
   api('/api/system').then(function(d){
-    if(!d||d.initializing) return;
-    set('sys-up',Math.floor((d.uptime||0)/60)+'m');
-    set('sys-mem',d.memory||'0MB');
-    set('sys-db',d.dbReady?'READY':'INIT');
-    set('sys-exec',d.executor?d.executor.slice(0,16)+'...':'not set');
-    var ce=document.getElementById('sys-contracts');
+    if(!d||d.initializing)return
+    var upMin=Math.floor((d.uptime||0)/60)
+    var upHour=Math.floor(upMin/60)
+    set('sys-up',upHour>0?upHour+'h '+( upMin%60)+'m':upMin+'m')
+    set('sys-mem',(d.memory||'0MB'))
+    set('sys-db',d.dbReady?'READY':'INIT')
+    set('sys-active',(d.activeChains||[]).length)
+    set('sb-uptime',Math.floor((d.uptime||0)/60)+'m')
+
+    var ce=document.getElementById('sys-contracts')
     if(ce&&d.contracts){
-      var cht='';
-      var cks=Object.keys(d.contracts);
-      for(var i=0;i<cks.length;i++){
-        var c=cks[i];
-        var a=d.contracts[c];
-        cht+='<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b)">';
-        cht+='<span style="color:var(--t3)">'+c.toUpperCase()+'</span>';
-        cht+='<span>'+(a&&a.length>10?a.slice(0,14)+'...':a||'--')+'</span>';
-        cht+='</div>';
-      }
-      ce.innerHTML=cht;
+      ce.innerHTML=Object.entries(d.contracts).map(function(entry){
+        var c=entry[0],a=entry[1]
+        var live=a&&a.startsWith('0x')
+        return '<div class="metric-row">'+
+          '<span class="metric-label">'+c.toUpperCase()+'</span>'+
+          '<span class="metric-val '+(live?'':'')+'">'+
+          (live?'<span style="color:var(--green)">'+a.slice(0,10)+'...</span>':
+          '<span style="color:var(--t3)">'+a+'</span>')+
+          '</span></div>'
+      }).join('')
     }
-    var le=document.getElementById('sys-log');
-    if(le&&d.apexLog){
-      if(d.apexLog.length===0){le.innerHTML='<div style="padding:10px;font-size:10px;color:var(--t3)">Initializing</div>';return;}
-      var lhtml='';
-      for(var j=0;j<d.apexLog.length;j++){
-        var l=d.apexLog[j];
-        lhtml+='<div style="padding:6px 10px;border-bottom:1px solid var(--b);font-size:10px;font-family:var(--mono);color:var(--t2)">';
-        lhtml+='<span style="color:var(--bluel)">['+((l.subsystem||'apex').toUpperCase())+']</span> ';
-        lhtml+=(l.action||'')+' '+(l.result?'-> '+String(l.result).slice(0,50):'');
-        lhtml+='</div>';
-      }
-      le.innerHTML=lhtml;
+
+    var ge=document.getElementById('sys-gas')
+    if(ge&&d.gasPrices){
+      ge.innerHTML=Object.entries(d.gasPrices).map(function(entry){
+        var c=entry[0],g=entry[1]
+        return '<div class="metric-row">'+
+          '<span class="metric-label">'+c.toUpperCase()+'</span>'+
+          '<span class="metric-val" style="font-family:var(--mono)">'+g+'</span></div>'
+      }).join('')
     }
-  });
+
+    var en=document.getElementById('sys-env')
+    if(en&&d.envStatus){
+      en.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">'+
+        Object.entries(d.envStatus).map(function(entry){
+          var k=entry[0],v=entry[1]
+          return '<div style="display:flex;align-items:center;gap:6px;font-size:10px">'+
+            '<span style="color:'+(v?'var(--green)':'var(--red)')+'">'+( v?'✓':'✗')+'</span>'+
+            '<span style="color:var(--t2)">'+k+'</span></div>'
+        }).join('')+'</div>'
+    }
+
+    var sc=document.getElementById('sb-chains')
+    if(sc&&d.activeChains){
+      sc.textContent=d.activeChains.length+' chains active: '+d.activeChains.join(', ')
+    }
+  })
 }
 
-function pct(p){var e=document.getElementById('wd-amt');if(e)e.value=(_avail*p/100).toFixed(2);}
+// ── APEX ──────────────────────────────────────────────────
+function loadAP(){
+  api('/api/system').then(function(d){
+    if(!d)return
+    if(d.apexLog){
+      var le=document.getElementById('apex-log')
+      if(le)le.innerHTML=d.apexLog.map(function(l){
+        return '<div style="padding:7px 10px;border-bottom:1px solid var(--b);'+
+          'font-size:10px;font-family:var(--mono);color:var(--t2)">'+
+          '<span style="color:var(--bluel)">['+((l.subsystem||'apex').toUpperCase())+']</span> '+
+          (l.action||'')+' '+(l.result?'→ '+String(l.result).slice(0,60):'')+'</div>'
+      }).join('')||'<div style="padding:10px;font-size:10px;color:var(--t3)">No decisions logged yet</div>'
+    }
+  })
+  api('/api/overview').then(function(d){
+    if(!d)return
+    if(d.apex){
+      set('apex-insight',d.apex.insight||'Scanning...')
+      set('apex-action','Action: '+(d.apex.action||'—'))
+      set('apex-chain','Priority chain: '+(d.apex.priorityChain||'polygon').toUpperCase())
+    }
+    if(d.chains){
+      var wr=document.getElementById('apex-wr')
+      if(wr){
+        wr.innerHTML=Object.entries(d.chains).map(function(entry){
+          var n=entry[0],c=entry[1]
+          var rate=Math.round(parseFloat(c.wr_aave||0.4)*100)
+          return '<div class="metric-row">'+
+            '<span class="metric-label">'+n.toUpperCase()+' / Aave</span>'+
+            '<div style="display:flex;align-items:center;gap:8px">'+
+            '<div style="width:60px;height:4px;background:var(--b);border-radius:2px">'+
+            '<div style="width:'+rate+'%;height:100%;background:'+(rate>60?'var(--green)':rate>40?'var(--yellow)':'var(--red)')+';border-radius:2px"></div></div>'+
+            '<span style="font-family:var(--mono);font-size:10px">'+rate+'%</span></div>'+
+            '</div>'
+        }).join('')
+      }
+    }
+  })
+}
+
+// ── CONTROLS ──────────────────────────────────────────────
+function pct(p){
+  var e=document.getElementById('wd-amt')
+  if(e)e.value=(_avail*p/100).toFixed(2)
+}
 
 function toggleAuto(){
-  fetch('/api/toggle-auto-withdraw',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
-    _auto=d.autoWithdraw; renderToggle();
-  });
+  fetch('/api/toggle-auto-withdraw',{method:'POST'})
+    .then(function(r){return r.json()})
+    .then(function(d){_auto=d.autoWithdraw;renderToggle()})
 }
 
 function doWithdraw(){
-  var amt=parseFloat(document.getElementById('wd-amt')&&document.getElementById('wd-amt').value);
-  var btn=document.getElementById('wd-btn');
-  if(!amt||amt<=0){showMsg('Enter valid amount','er');return;}
-  btn.disabled=true; btn.textContent='SENDING...';
-  document.getElementById('wd-msg').className='msg';
-  fetch('/api/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amt})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.success){showMsg('Transfer sent — arrives via Wave in 5-10 minutes','ok');document.getElementById('wd-amt').value='';setTimeout(loadTR,2000);}
-      else showMsg(d.error||'Transfer failed','er');
-    })
-    .catch(function(e){showMsg(e.message,'er');})
-    .finally(function(){btn.disabled=false;btn.textContent='WITHDRAW TO WAVE';});
+  var amt=parseFloat(document.getElementById('wd-amt').value)
+  var btn=document.getElementById('wd-btn')
+  if(!amt||amt<=0){showMsg('Enter a valid amount','er');return}
+  btn.disabled=true;btn.textContent='SENDING...'
+  document.getElementById('wd-msg').className='msg'
+  fetch('/api/withdraw',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({amount:amt})
+  })
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.success){
+      showMsg('Transfer sent — arrives via Wave in 5-10 minutes','ok')
+      document.getElementById('wd-amt').value=''
+      setTimeout(loadTR,2000)
+    }else showMsg(d.error||'Transfer failed','er')
+  })
+  .catch(function(e){showMsg(e.message,'er')})
+  .finally(function(){btn.disabled=false;btn.textContent='WITHDRAW TO WAVE'})
 }
 
-function showMsg(txt,cls){var e=document.getElementById('wd-msg');if(e){e.textContent=txt;e.className='msg '+cls;}}
+function showMsg(txt,cls){
+  var e=document.getElementById('wd-msg')
+  if(e){e.textContent=txt;e.className='msg '+cls}
+}
 
+function addFeedItem(data){
+  var fe=document.getElementById('feed')
+  if(!fe)return
+  var el=document.createElement('div')
+  el.className='fi ok'
+  el.innerHTML='<span class="fc">'+(data.chain||'?').toUpperCase().slice(0,3)+'</span>'+
+    '<span class="ft">aave</span>'+
+    '<span class="fb">new execution</span>'+
+    '<span class="fp">+'+fmt(data.profit)+'</span>'
+  fe.insertBefore(el,fe.firstChild)
+  if(fe.children.length>20)fe.removeChild(fe.lastChild)
+}
+
+function addMissedItem(data){
+  var fe=document.getElementById('feed')
+  if(!fe)return
+  var el=document.createElement('div')
+  el.className='fi miss'
+  el.innerHTML='<span class="fc">'+(data.chain||'?').toUpperCase().slice(0,3)+'</span>'+
+    '<span class="ft">missed</span>'+
+    '<span class="fb">no contract</span>'+
+    '<span class="fp miss">'+fmt(data.profit)+' missed</span>'
+  fe.insertBefore(el,fe.firstChild)
+  if(fe.children.length>20)fe.removeChild(fe.lastChild)
+}
+
+// AUTO REFRESH
 setInterval(function(){
-  var active=document.querySelector('.page.on');
-  var id=active?active.id.slice(2):'overview';
-  load(id);
-},10000);
+  var active=document.querySelector('.page.on')
+  var id=active?active.id.slice(2):'overview'
+  load(id)
+},15000)
 
 setInterval(function(){
   api('/api/overview').then(function(d){
-    if(d&&!d.initializing){set('t-total',fmt(d.totalRevenue));set('t-today',fmt(d.todayRevenue));}
-  });
-},5000);
+    if(d&&!d.initializing){
+      set('t-total',fmt(d.totalRevenue))
+      set('t-today',fmt(d.todayRevenue))
+      set('sb-total',fmt(d.totalRevenue))
+      set('sb-today',fmt(d.todayRevenue))
+      set('sb-borrow',d.borrowers||0)
+      set('sb-risk',d.atRisk||0)
+      set('sb-liq',d.liquidatable||0)
+      set('nb-liq',d.liquidatable||0)
+    }
+  })
+},5000)
 
-loadOV();
+loadOV()
 </script>
 </body>
 </html>
-HTMLEOF
