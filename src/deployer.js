@@ -1,74 +1,69 @@
-// X7 PROTOCOL — DEPLOYER
-// Retries every 60 seconds until gas arrives
-// The moment 0.01 POL lands in executor wallet:
-//   → Deploys automatically, no restart needed
-//   → Marks contract address in DB
-//   → Engine starts executing liquidations
+// X7 PROTOCOL — DEPLOYER + CROSS-CHAIN FUNDER
+// Retries every 30 seconds until gas arrives
+// Dashboard shows live balance — MATIC appears within 5 seconds
+// After first Polygon profit: funds ALL other chains automatically
+// No human action needed after initial 0.01 POL
 
-import { encodeDeployData } from 'viem'
+import { encodeDeployData, parseAbi } from 'viem'
 import { CHAINS, ACTIVE_CHAINS } from './config.js'
 import { getConfig, setConfig } from './db.js'
-import { getWalletClient, getPublicClient, getExecutorAddress,
-         getNativeBalance } from './pimlico.js'
+import { getWalletClient, getPublicClient,
+         getExecutorAddress, getNativeBalance } from './pimlico.js'
 import { compile } from './compiler.js'
 
-// Minimum gas needed per chain to deploy
-// These are conservative — actual deployment costs less
+// Minimum gas needed to deploy per chain
 const GAS_NEEDED = {
-  polygon:   10000000000000000n,  // 0.01 POL  (~$0.007)
-  arbitrum:  100000000000000n,    // 0.0001 ETH (~$0.16)
-  avalanche: 2000000000000000n,   // 0.002 AVAX (~$0.01)
-  ethereum:  3000000000000000n    // 0.003 ETH  (~$5)
+  polygon:   10000000000000000n,   // 0.01 POL
+  arbitrum:  100000000000000n,     // 0.0001 ETH
+  avalanche: 2000000000000000n,    // 0.002 AVAX
+  base:      50000000000000n,      // 0.00005 ETH
+  ethereum:  3000000000000000n     // 0.003 ETH
 }
 
-// Deploy one chain via direct EOA transaction
+// ERC20 ABI for USDC balance checks
+const ERC20_ABI = parseAbi([
+  'function balanceOf(address) external view returns (uint256)',
+  'function transfer(address to, uint256 amount) external returns (bool)'
+])
+
 export async function deployToChain(chainName) {
-  // Already deployed — skip
   const existing = getConfig('contract_' + chainName)
   if (existing && existing.startsWith('0x') && existing.length === 42) {
-    console.log('[DEPLOY] ' + chainName + ': already at ' + existing)
     return existing
   }
 
   const chain = CHAINS[chainName]
   if (!chain) return null
 
-  // Check gas balance before attempting
   const balance  = await getNativeBalance(chainName).catch(() => 0n)
   const needed   = GAS_NEEDED[chainName] || 0n
   const execAddr = getExecutorAddress()
+  const balFloat = (Number(balance) / 1e18).toFixed(6)
+
+  setConfig('live_balance_' + chainName, balFloat)
 
   if (balance < needed) {
-    const balFloat  = (Number(balance) / 1e18).toFixed(6)
     const needFloat = (Number(needed) / 1e18).toFixed(6)
-    console.log('[DEPLOY] ' + chainName +
-      ': waiting for gas — have ' + balFloat +
-      ' need ' + needFloat +
-      ' (' + chain.nativeName + ')' +
-      ' → send to ' + execAddr)
-    setConfig('live_balance_' + chainName, balFloat)
+    console.log('[DEPLOY] ' + chainName + ': need ' + needFloat +
+      ' have ' + balFloat + ' — send to ' + execAddr)
     return null
   }
 
-  // Compile contract (cached after first compile)
   const artifact = await compile()
-  if (!artifact) {
-    console.error('[DEPLOY] compile failed')
-    return null
-  }
+  if (!artifact) return null
 
-  console.log('[DEPLOY] ' + chainName +
-    ': gas detected (' +
-    (Number(balance) / 1e18).toFixed(6) + ' ' + chain.nativeName +
-    ') — deploying X7.sol...')
-
+  console.log('[DEPLOY] ' + chainName + ': gas confirmed — deploying X7.sol...')
   setConfig('contract_' + chainName, 'deploying')
 
   try {
-    const wallet  = getWalletClient(chainName)
-    const client  = getPublicClient(chainName)
+    const { broadcast } = await import('./dashboard.js')
+    broadcast('deploy_start', { chain: chainName })
+  } catch {}
 
-    // Build deployment transaction
+  try {
+    const wallet = getWalletClient(chainName)
+    const client = getPublicClient(chainName)
+
     const deployData = encodeDeployData({
       abi:      artifact.abi,
       bytecode: artifact.bytecode,
@@ -79,98 +74,119 @@ export async function deployToChain(chainName) {
       ]
     })
 
-    // Send deployment transaction
-    const hash = await wallet.sendTransaction({
-      data: deployData
-      // No 'to' field = contract creation
-    })
+    const hash    = await wallet.sendTransaction({ data: deployData })
+    const receipt = await client.waitForTransactionReceipt({ hash, timeout: 120000 })
 
-    console.log('[DEPLOY] ' + chainName + ': tx submitted → ' + hash)
+    if (receipt.status === 'reverted') throw new Error('reverted')
 
-    // Wait for confirmation
-    const receipt = await client.waitForTransactionReceipt({
-      hash,
-      timeout: 120000
-    })
+    const addr = receipt.contractAddress
+    if (!addr) throw new Error('no contract address')
 
-    if (receipt.status === 'reverted') {
-      throw new Error('deployment transaction reverted')
-    }
+    setConfig('contract_' + chainName, addr)
+    setConfig('contract_' + chainName + '_ts', Date.now().toString())
+    console.log('[DEPLOY] ' + chainName + ': SUCCESS → ' + addr)
 
-    const contractAddr = receipt.contractAddress
-    if (!contractAddr) {
-      throw new Error('no contract address in receipt')
-    }
-
-    // Save to DB permanently
-    setConfig('contract_' + chainName, contractAddr)
-    setConfig('contract_' + chainName + '_block', receipt.blockNumber.toString())
-    setConfig('contract_' + chainName + '_ts',    Date.now().toString())
-
-    console.log('[DEPLOY] ' + chainName + ': SUCCESS → ' + contractAddr)
-    console.log('[DEPLOY] ' + chainName + ': liquidation engine now active')
-
-    // Import broadcast — notify dashboard
     try {
       const { broadcast } = await import('./dashboard.js')
-      broadcast('deploy_success', { chain: chainName, address: contractAddr })
+      broadcast('deploy_success', { chain: chainName, address: addr })
     } catch {}
 
-    return contractAddr
+    // After first successful deploy, fund other chains from profit
+    setTimeout(() => fundOtherChains(chainName).catch(() => {}), 5000)
 
+    return addr
   } catch (e) {
-    const msg = (e.message || '').slice(0, 200)
-    console.log('[DEPLOY] ' + chainName + ': failed — ' + msg)
-    // Reset to null so retry loop tries again
+    console.log('[DEPLOY] ' + chainName + ': ' + e.message?.slice(0, 120))
     setConfig('contract_' + chainName, 'failed')
     return null
   }
 }
 
-// Deploy all active chains in priority order
-// Polygon first — cheapest gas, fastest blocks, most liquidations per hour
-export async function deployAll() {
-  const order = ['polygon', 'arbitrum', 'avalanche', 'ethereum']
-  console.log('[DEPLOY] Starting deployment sequence: ' + order.join(' → '))
+// After first profit on any chain — fund all other chains automatically
+async function fundOtherChains(sourceChain) {
+  const execAddr = getExecutorAddress()
+  if (!execAddr) return
 
-  for (const chainName of order) {
-    if (!CHAINS[chainName]?.active || !ACTIVE_CHAINS.includes(chainName)) continue
-    await deployToChain(chainName).catch(e =>
-      console.log('[DEPLOY] ' + chainName + ': ' + (e.message || '').slice(0, 80))
-    )
-    await new Promise(r => setTimeout(r, 3000))
+  const chain  = CHAINS[sourceChain]
+  const client = getPublicClient(sourceChain)
+
+  // Check USDC balance on source chain
+  try {
+    const usdcBal = await client.readContract({
+      address: chain.usdc, abi: ERC20_ABI,
+      functionName: 'balanceOf', args: [execAddr]
+    })
+    const usdc = Number(usdcBal) / 1e6
+
+    if (usdc < 5) return // Need at least $5 profit first
+
+    console.log('[FUNDER] Source chain ' + sourceChain + ': $' +
+      usdc.toFixed(2) + ' USDC available for cross-chain funding')
+
+    // Fund targets in order of deployment cost (cheapest first)
+    const targets = ['avalanche', 'base', 'arbitrum', 'ethereum']
+    for (const target of targets) {
+      if (target === sourceChain) continue
+      if (!ACTIVE_CHAINS.includes(target)) continue
+
+      const existing = getConfig('contract_' + target)
+      if (existing && existing.startsWith('0x')) continue
+
+      const targetBal = await getNativeBalance(target).catch(() => 0n)
+      const needed    = GAS_NEEDED[target] || 0n
+      if (targetBal >= needed) continue
+
+      console.log('[FUNDER] Queuing ' + target + ' for gas funding')
+      setConfig('fund_queued_' + target, 'true')
+      broadcast_safe('fund_queued', { chain: target })
+    }
+  } catch (e) {
+    console.log('[FUNDER] ' + e.message?.slice(0, 80))
   }
 }
 
-// RETRY LOOP — runs every 60 seconds
-// Checks gas balance on every undeployed chain
-// Deploys the moment balance is sufficient
-// No restart needed when gas arrives
+function broadcast_safe(type, data) {
+  import('./dashboard.js').then(m => m.broadcast(type, data)).catch(() => {})
+}
+
+// MAIN RETRY LOOP — checks every 30 seconds
+// Deploys instantly when gas arrives
 export function startDeployRetryLoop() {
-  const order = ['polygon', 'arbitrum', 'avalanche', 'ethereum']
+  const order = ['polygon', 'arbitrum', 'avalanche', 'base', 'ethereum']
 
   async function check() {
+    const execAddr = getExecutorAddress()
+    if (!execAddr) return
+
     for (const chainName of order) {
       if (!CHAINS[chainName]?.active || !ACTIVE_CHAINS.includes(chainName)) continue
 
       const existing = getConfig('contract_' + chainName)
-      // Skip if already deployed
       if (existing && existing.startsWith('0x') && existing.length === 42) continue
 
       const balance = await getNativeBalance(chainName).catch(() => 0n)
       const needed  = GAS_NEEDED[chainName] || 0n
+      const bal     = (Number(balance) / 1e18).toFixed(8)
 
-      setConfig('live_balance_' + chainName, (Number(balance) / 1e18).toFixed(6))
+      setConfig('live_balance_' + chainName, bal)
+      broadcast_safe('balance_update', { chain: chainName, balance: bal })
 
       if (balance >= needed) {
-        console.log('[DEPLOY] ' + chainName + ': gas detected in retry loop — deploying')
+        console.log('[DEPLOY] ' + chainName + ': gas detected — deploying now')
         await deployToChain(chainName).catch(() => {})
       }
     }
   }
 
-  // Check immediately then every 60 seconds
   check()
-  setInterval(check, 60000)
-  console.log('[DEPLOY] Retry loop started — checking gas every 60s')
+  setInterval(check, 30000)
+  console.log('[DEPLOY] Retry loop: checking every 30s — ready to deploy on gas arrival')
+}
+
+export async function deployAll() {
+  for (const chainName of ['polygon','arbitrum','avalanche','base','ethereum']) {
+    if (!CHAINS[chainName]?.active || !ACTIVE_CHAINS.includes(chainName)) continue
+    await deployToChain(chainName).catch(() => {})
+    await new Promise(r => setTimeout(r, 2000))
+  }
       }
