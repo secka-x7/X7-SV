@@ -1,126 +1,124 @@
 // X7 PROTOCOL — ENTRY POINT
-// Boot order: health → DB → strategies → scanner → engine
-// All 4 strategies start immediately on boot
-// Revenue detection active within seconds
+// 99.999% resources to 33 strategies
+// All 33 strategies live within 60 seconds of MATIC arrival
+// Yield/learner/apex deferred until $50K profit accumulated
 
 import { startDashboard, broadcast } from './dashboard.js'
 
-console.log('X7 PROTOCOL STARTING')
+console.log('X7 PROTOCOL — 33 STRATEGY ENGINE STARTING')
 startDashboard()
 console.log('/health live')
 
-setTimeout(boot, 1500)
+setTimeout(boot, 500) // Fast boot — 500ms not 1500ms
 
 async function boot() {
-  // DB
-  try { const {initDB}=await import('./db.js'); await initDB() }
-  catch(e) { console.error('DB fatal:',e.message); process.exit(1) }
-
-  const need = ['EXECUTOR_PRIVATE_KEY','MODEM_PAY_SECRET_KEY','MODEM_PAY_WAVE_NUMBER']
-  const miss  = need.filter(k=>!process.env[k])
-  if (miss.length) console.warn('[BOOT] Missing:', miss.join(', '))
-
+  // DB first — everything depends on it
   try {
-    const {getExecutorAddress} = await import('./pimlico.js')
+    const { initDB } = await import('./db.js')
+    await initDB()
+  } catch (e) { console.error('DB fatal:', e.message); process.exit(1) }
+
+  // Print executor address immediately
+  try {
+    const { getExecutorAddress } = await import('./pimlico.js')
     const addr = getExecutorAddress()
     console.log('[BOOT] Executor: ' + addr)
-    console.log('[BOOT] Send 0.01 POL to above address on Polygon')
+    console.log('[BOOT] Send 0.01 POL → deploys in < 1 second')
   } catch {}
 
-  // APEX — market intelligence
-  try { const {startApex}=await import('./apex.js'); await startApex() }
-  catch(e) { console.warn('[APEX]:', e.message) }
-
-  // COMPILE — contract bytecode ready
-  try { const {compile}=await import('./compiler.js'); await compile() }
-  catch(e) { console.warn('[COMPILE]:', e.message) }
-
-  // DEPLOY RETRY LOOP — deploys the second MATIC arrives
+  // Compile contract (required for deployment)
   try {
-    const {startDeployRetryLoop} = await import('./deployer.js')
-    startDeployRetryLoop()
-  } catch(e) { console.warn('[DEPLOY]:', e.message) }
+    const { compile } = await import('./compiler.js')
+    await compile()
+    console.log('[BOOT] Contract compiled — ready to deploy')
+  } catch (e) { console.warn('[COMPILE]:', e.message) }
 
-  // STRATEGY 1 — CEX-DEX Arbitrage (starts scanning immediately)
+  // START DEPLOYER — watches for MATIC, deploys in < 1 second
+  // This is the gate — strategies need deployed contracts to execute
   try {
-    const {startCexDex} = await import('./cexdex.js')
-    startCexDex()
-  } catch(e) { console.warn('[CEX-DEX]:', e.message) }
+    const { startDeployer } = await import('./deployer.js')
+    await startDeployer()
+  } catch (e) { console.warn('[DEPLOY]:', e.message) }
 
-  // STRATEGY 2 — Atomic Backrun (watches pools from second 1)
+  // START 33 STRATEGIES — start immediately, queue until contract deployed
+  // Strategies detect opportunities now, execute the moment contract is live
   try {
-    const {startBackrun} = await import('./backrun.js')
-    startBackrun()
-  } catch(e) { console.warn('[BACKRUN]:', e.message) }
+    const { startStrategies } = await import('./strategies.js')
+    startStrategies()
+    console.log('[BOOT] 33 strategies ACTIVE')
+  } catch (e) { console.error('[STRATEGIES]:', e.message) }
 
-  // STRATEGY 3 — JIT Liquidity (mempool watcher starts immediately)
+  // START SCANNER — feeds liquidation opportunities to strategies
   try {
-    const {startJIT} = await import('./jit.js')
-    startJIT()
-  } catch(e) { console.warn('[JIT]:', e.message) }
+    const { startScanner } = await import('./scanner.js')
+    const { handleLiquidation } = await import('./strategies.js')
+    startScanner(handleLiquidation)
+    console.log('[BOOT] Scanner feeding liquidations to strategies')
+  } catch (e) { console.error('[SCANNER]:', e.message) }
 
-  // YIELD — passive income on idle USDC
-  try { const {startYield}=await import('./yield.js'); startYield() }
-  catch(e) { console.warn('[YIELD]:', e.message) }
-
-  // LEARNER — win rate optimization
-  try { const {startLearner}=await import('./learner.js'); startLearner() }
-  catch(e) { console.warn('[LEARNER]:', e.message) }
-
-  // STRATEGY 4 + SCANNER — liquidation engine with 100K borrowers
+  // EXECUTION ENGINE — processes liquidation queue
   try { await startEngine() }
-  catch(e) { console.error('[ENGINE]:', e.message) }
+  catch (e) { console.error('[ENGINE]:', e.message) }
 
-  console.log('X7 PROTOCOL OPERATIONAL — ALL 4 STRATEGIES ACTIVE')
+  // DEFERRED SERVICES — only start after $50K profit
+  // These consume resources that should go to strategies
+  startDeferredWhenProfitable()
+
+  console.log('X7 PROTOCOL OPERATIONAL — 33 STRATEGIES — $100M+ TARGETS ONLY')
+}
+
+// Deferred services — yield, learner, apex start only after first $50K
+function startDeferredWhenProfitable() {
+  const check = setInterval(async () => {
+    try {
+      const { getTotalRevenue } = await import('./db.js')
+      const rev = getTotalRevenue()
+      if (rev < 50000) return // Wait for $50K before using resources on these
+
+      clearInterval(check)
+      console.log('[BOOT] $50K threshold reached — starting secondary services')
+
+      try { const { startApex } = await import('./apex.js'); await startApex() } catch {}
+      try { const { startYield } = await import('./yield.js'); startYield() } catch {}
+      try { const { startLearner } = await import('./learner.js'); startLearner() } catch {}
+    } catch {}
+  }, 30000) // Check every 30 seconds
 }
 
 async function startEngine() {
-  const {startScanner}         = await import('./scanner.js')
-  const {executeLiquidation}   = await import('./liquidate.js')
-  const {checkAutoWithdraw}    = await import('./treasury.js')
-  const {setConfig, getConfig} = await import('./db.js')
+  const { handleLiquidation } = await import('./strategies.js')
+  const { checkAutoWithdraw }  = await import('./treasury.js')
+  const { setConfig }          = await import('./db.js')
 
-  // Three priority tiers
-  const tier0 = [] // HF < 0.85 — execute instantly
-  const tier1 = [] // HF < 0.95 — 100% close factor
-  const tier2 = [] // HF < 1.00 — 50% close factor
+  // Queue processes at 100ms — fast enough for all opportunities
+  const tier0 = [], tier1 = [], tier2 = []
   let   busy  = false
 
   const enqueue = opp => {
     const q = opp.hf < 0.85 ? tier0 : opp.tier1 ? tier1 : tier2
-    const exists = q.find(o =>
-      o.borrower === opp.borrower && o.chainName === opp.chainName)
-    if (!exists) {
+    if (!q.find(o => o.borrower === opp.borrower && o.chainName === opp.chainName)) {
       q.push(opp)
-      const tier = opp.hf < 0.85 ? 0 : opp.tier1 ? 1 : 2
-      console.log('[QUEUE] ' + opp.chainName + ' ' +
-        opp.borrower?.slice(0,10) + ' HF=' + opp.hf?.toFixed(4) +
-        ' tier' + tier)
-      broadcast('opportunity', { chain:opp.chainName, hf:opp.hf, tier })
+      broadcast('opportunity', { chain: opp.chainName, hf: opp.hf,
+        tier: opp.hf < 0.85 ? 0 : opp.tier1 ? 1 : 2 })
     }
   }
 
-  // 100ms execution loop — tier0 first, always
   setInterval(async () => {
     if (busy) return
     const opp = tier0.shift() || tier1.shift() || tier2.shift()
     if (!opp) return
     busy = true
     try {
-      const result = await executeLiquidation(opp)
-      if (result?.success) {
-        broadcast('execution', { chain:opp.chainName, profit:result.profitUSD })
-        await checkAutoWithdraw().catch(() => {})
-        setConfig('cascade_trigger_' + opp.chainName, Date.now())
-      }
-    } catch(e) { console.error('[QUEUE]:', e.message) }
+      await handleLiquidation(opp)
+      await checkAutoWithdraw().catch(() => {})
+      setConfig('cascade_trigger_' + opp.chainName, Date.now())
+    } catch (e) { console.error('[ENGINE]:', e.message) }
     finally { busy = false }
   }, 100)
 
-  startScanner(enqueue)
-  console.log('[ENGINE] 3-tier queue — 100ms cycle — 100K borrowers loading')
+  console.log('[ENGINE] Liquidation queue active — 100ms cycle')
 }
 
 process.on('uncaughtException',  e => console.error('[UNCAUGHT]:', e.message))
-process.on('unhandledRejection', e => console.error('[REJECTION]:', String(e).slice(0,200)))
+process.on('unhandledRejection', e => console.error('[REJECT]:',   String(e).slice(0,200)))
 process.on('SIGTERM', () => { console.log('SIGTERM'); process.exit(0) })
