@@ -1,246 +1,144 @@
-// X7-SV — INSTANT DEPLOYER
-// Detects MATIC in mempool (pending) — deploys in < 1 second
-// All chains funded from first Polygon profit via Across Protocol bridge
-// Priority RPC — isolated from scanner, never rate limited
+// X7-SV · deployer.js — CREATE2 zero-seed bootstrap
+// Contract deploys itself from profit of its own first trade
 
-import { encodeDeployData } from 'viem'
-import { getConfig, setConfig } from './db.js'
-import { getActiveChains, getChain } from './chains.js'
-import { rpcCall } from './rpc.js'
+import { encodeAbiParameters, parseAbiParameters } from 'viem'
 import { compile } from './compiler.js'
-import WebSocket from 'ws'
+import { computeCreate2Address, buildDeployCalldata, contractExists, setContractAddr, getContractAddr, getWalletClient, getPublicClient, sendTx, waitTx } from './pimlico.js'
+import { executeBundle } from './builders.js'
+import { getActiveChains, getChain } from './chains.js'
+import { getConfig, setConfig } from './db.js'
+import { emit } from './index.js'
 
-const GAS_NEEDED = {
-  polygon:   10000000000000000n,
-  arbitrum:  100000000000000n,
-  avalanche: 2000000000000000n,
-  base:      50000000000000n,
-  optimism:  50000000000000n,
-  ethereum:  3000000000000000n,
-  bnb:       5000000000000000n,
-  scroll:    50000000000000n
+const CREATE2_FACTORY = '0x4e59b44847b379578588920cA78FbF26c0B4956C'
+const _deploying = new Set()
+
+// Build constructor args for X7.sol
+function buildConstructorArgs(chain) {
+  return encodeAbiParameters(
+    parseAbiParameters('address,address,address,address'),
+    [
+      chain.router || '0x0000000000000000000000000000000000000001',
+      chain.usdc   || '0x0000000000000000000000000000000000000001',
+      chain.flashAddr || '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+      chain.aavePool  || '0x0000000000000000000000000000000000000001'
+    ]
+  )
 }
 
-// Across Protocol fast bridge (30-60 seconds cross-chain)
-const ACROSS_SPOKE_POOLS = {
-  polygon:  '0x9295ee1d8C5b022Be115A2AD3c30C72E34e7F096',
-  arbitrum: '0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A',
-  base:     '0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64',
-  optimism: '0x6f26Bf09B1C792e3228e5467807a900A503c0281',
-  ethereum: '0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5'
-}
+export async function deployChain(chainName) {
+  if (_deploying.has(chainName)) return null
+  const existing = getContractAddr(chainName)
+  if (existing) return existing
 
-const DEPLOY_STATE = {}
-
-async function deployChain(chainName, artifact) {
-  if (DEPLOY_STATE[chainName] === 'deploying') return null
-  const existing = getConfig('contract_' + chainName)
-  if (existing?.startsWith('0x') && existing.length === 42) return existing
+  const artifact = await compile()
+  if (!artifact) { console.error('[DEPLOY]', chainName, 'compile failed'); return null }
 
   const chain = getChain(chainName)
   if (!chain) return null
 
-  DEPLOY_STATE[chainName] = 'deploying'
-  setConfig('contract_' + chainName, 'deploying')
+  _deploying.add(chainName)
+  setConfig('deploy_status_' + chainName, 'deploying')
 
   try {
-    const { getWalletClient, getPublicClient } = await import('./pimlico.js')
-    const wallet  = getWalletClient(chainName)
-    const client  = getPublicClient(chainName)
+    const constructorArgs = buildConstructorArgs(chain)
+    const { addr, salt } = computeCreate2Address(artifact.bytecode)
+    const deployCalldata = buildDeployCalldata(artifact.bytecode, constructorArgs, salt)
 
-    const deployData = encodeDeployData({
-      abi:      artifact.abi,
-      bytecode: artifact.bytecode,
-      args: [chain.router || '0x0000000000000000000000000000000000000001', chain.usdc || '0x0000000000000000000000000000000000000001']
-    })
+    console.log('[DEPLOY]', chainName, '→ predicted address:', addr)
 
-    console.log('[DEPLOY] ' + chainName + ': submitting...')
-    const hash    = await wallet.sendTransaction({ data: deployData })
-    const receipt = await client.waitForTransactionReceipt({ hash, timeout: 120000 })
-    if (receipt.status === 'reverted') throw new Error('reverted')
-    const addr = receipt.contractAddress
-    if (!addr) throw new Error('no address')
+    // For Ethereum: bootstrap bundle (deploy + execute in same bundle, profit pays for deploy)
+    if (chainName === 'ethereum' && chain.weth && chain.usdc) {
+      // Build bootstrapExecute calldata
+      const { encodeFunctionData, parseAbi } = await import('viem')
+      const execData = encodeFunctionData({
+        abi: parseAbi(['function bootstrapExecute(address,address,uint256,uint24,uint24,uint256) external']),
+        functionName: 'bootstrapExecute',
+        args: [chain.weth, chain.usdc, BigInt(100000e18), 500, 3000, 8000n]
+      })
 
-    setConfig('contract_' + chainName, addr)
-    DEPLOY_STATE[chainName] = 'live'
-    console.log('[DEPLOY] ' + chainName + ': LIVE → ' + addr)
+      // Build signed deploy tx
+      const wallet = getWalletClient(chainName)
+      const client = getPublicClient(chainName)
+      if (!wallet || !client) throw new Error('No client')
 
-    try {
-      const { broadcast } = await import('./dashboard.js')
-      broadcast('deploy_success', { chain: chainName, address: addr })
-    } catch {}
+      const nonce = await client.getTransactionCount({ address: wallet.account.address })
+      const gas = { maxFeePerGas: 3000000000n, maxPriorityFeePerGas: 2000000000n }
+      const deployTx = await wallet.signTransaction({ to: CREATE2_FACTORY, data: deployCalldata, nonce, gas: 500000n, chainId: 1, ...gas })
 
-    // After first deploy: fund all other chains
-    if (chainName === 'polygon') {
-      setTimeout(() => fundAllChains().catch(() => {}), 5000)
+      // Submit bootstrap bundle: [deploy, execute] — profit pays builder
+      const result = await executeBundle(chainName, addr, execData, 1000, deployTx)
+      if (result) {
+        setContractAddr(chainName, addr)
+        _deploying.delete(chainName)
+        setConfig('deploy_status_' + chainName, 'live')
+        console.log('[DEPLOY]', chainName, 'LIVE (zero-seed bootstrap):', addr)
+        emit('deploy_success', { chain: chainName, address: addr })
+        setTimeout(() => fundAllChains(addr).catch(() => {}), 5000)
+        return addr
+      }
     }
 
+    // For L2s: direct deploy (gas is cents, funded from Ethereum profit via bridge)
+    const hash = await sendTx(chainName, CREATE2_FACTORY, deployCalldata)
+    if (!hash) throw new Error('sendTx returned null')
+
+    const receipt = await waitTx(chainName, hash)
+    if (!receipt || receipt.status === 'reverted') throw new Error('deploy reverted')
+
+    // Verify contract exists at predicted address
+    const exists = await contractExists(chainName, addr)
+    if (!exists) throw new Error('contract not found at CREATE2 address')
+
+    setContractAddr(chainName, addr)
+    setConfig('deploy_status_' + chainName, 'live')
+    _deploying.delete(chainName)
+    console.log('[DEPLOY]', chainName, 'LIVE:', addr)
+    emit('deploy_success', { chain: chainName, address: addr })
     return addr
   } catch (e) {
-    console.log('[DEPLOY] ' + chainName + ': ' + e.message?.slice(0, 100))
-    setConfig('contract_' + chainName, 'failed')
-    DEPLOY_STATE[chainName] = 'failed'
+    console.error('[DEPLOY]', chainName, e.message?.slice(0, 100))
+    setConfig('deploy_status_' + chainName, 'failed')
+    _deploying.delete(chainName)
     return null
   }
 }
 
-async function fundAllChains() {
-  const { getExecutorAddress, getPublicClient } = await import('./pimlico.js')
-  const execAddr = getExecutorAddress()
-  if (!execAddr) return
-
-  // Check USDC balance on Polygon
-  const chain  = getChain('polygon')
-  if (!chain?.usdc) return
-
-  const balHex = await rpcCall('polygon', 'eth_call', [{
-    to:   chain.usdc,
-    data: '0x70a08231000000000000000000000000' + execAddr.slice(2)
-  }, 'latest'])
-
-  const usdcBal = Number(BigInt(balHex || '0x0')) / 1e6
-  if (usdcBal < 5) return
-
-  console.log('[DEPLOY] First profit: $' + usdcBal.toFixed(2) + ' USDC — funding all chains')
-
-  const targets = ['arbitrum', 'base', 'optimism', 'ethereum', 'avalanche', 'bnb']
-  for (const target of targets) {
-    const existing = getConfig('contract_' + target)
-    if (existing?.startsWith('0x') && existing.length === 42) continue
-    console.log('[DEPLOY] Queuing bridge to: ' + target)
-    setConfig('bridge_queued_' + target, 'true')
-    try {
-      const { broadcast } = await import('./dashboard.js')
-      broadcast('chain_funding', { chain: target })
-    } catch {}
-    await new Promise(r => setTimeout(r, 500))
+// After first profit, bridge to fund all other chains
+async function fundAllChains(fromContract) {
+  const chains = getActiveChains().filter(c => c.name !== 'ethereum' && !getContractAddr(c.name))
+  for (const chain of chains) {
+    console.log('[DEPLOY] Queuing', chain.name, 'via bridge...')
+    setConfig('bridge_queued_' + chain.name, 'true')
+    emit('chain_funding', { chain: chain.name })
+    // Small delay between chain deployments
+    await new Promise(r => setTimeout(r, 3000))
+    deployChain(chain.name).catch(e => console.log('[DEPLOY]', chain.name, e.message?.slice(0, 60)))
   }
-}
-
-// PENDING TRANSACTION WATCHER — fires before block confirms
-function watchPendingTxs(execAddr, artifact) {
-  const chain = getChain('polygon')
-  if (!chain?.rpcWss || chain.rpcWss.includes('demo')) return
-
-  function connect() {
-    try {
-      const ws = new WebSocket(chain.rpcWss)
-      ws.on('open', () => {
-        ws.send(JSON.stringify({
-          jsonrpc:'2.0', id:1, method:'eth_subscribe',
-          params: ['newPendingTransactions']
-        }))
-        console.log('[DEPLOY] Pending tx watcher active — deploys in <1s of MATIC')
-      })
-      ws.on('message', async (raw) => {
-        try {
-          const msg  = JSON.parse(raw.toString())
-          const hash = msg.params?.result
-          if (!hash || typeof hash !== 'string') return
-
-          // Fetch tx details
-          const tx = await rpcCall('polygon', 'eth_getTransactionByHash', [hash])
-          if (!tx) return
-          if (tx.to?.toLowerCase() !== execAddr.toLowerCase()) return
-
-          const val = BigInt(tx.value || '0x0')
-          if (val < 5000000000000000n) return // < 0.005 POL
-
-          console.log('[DEPLOY] MATIC INCOMING! Pending tx detected → deploying NOW')
-          await deployChain('polygon', artifact)
-        } catch {}
-      })
-      ws.on('error', () => {})
-      ws.on('close', () => setTimeout(connect, 2000))
-    } catch { setTimeout(connect, 5000) }
-  }
-  connect()
-}
-
-// CONFIRMED BALANCE WATCHER — fires every new block
-function watchNewHeads(execAddr, artifact) {
-  const chains = ['polygon','arbitrum','avalanche','base','ethereum','optimism','bnb','scroll']
-  chains.forEach(chainName => {
-    const chain = getChain(chainName)
-    if (!chain?.rpcWss || chain.rpcWss.includes('demo')) return
-
-    function connect() {
-      try {
-        const ws = new WebSocket(chain.rpcWss)
-        ws.on('open', () => {
-          ws.send(JSON.stringify({
-            jsonrpc:'2.0', id:2, method:'eth_subscribe', params:['newHeads']
-          }))
-        })
-        ws.on('message', async (raw) => {
-          try {
-            const msg = JSON.parse(raw.toString())
-            if (!msg.params?.result?.number) return
-            const existing = getConfig('contract_' + chainName)
-            if (existing?.startsWith('0x') && existing.length === 42) return
-            if (DEPLOY_STATE[chainName] === 'deploying') return
-
-            const balHex = await rpcCall(chainName, 'eth_getBalance', [execAddr, 'latest'])
-            const bal    = BigInt(balHex || '0x0')
-            const needed = GAS_NEEDED[chainName] || GAS_NEEDED.polygon
-            const f      = (Number(bal) / 1e18).toFixed(8)
-            setConfig('live_balance_' + chainName, f)
-            try {
-              const { broadcast } = await import('./dashboard.js')
-              broadcast('balance_tick', { chain: chainName, balance: f })
-            } catch {}
-            if (bal >= needed) {
-              console.log('[DEPLOY] ' + chainName + ': balance confirmed ' + f + ' → deploying')
-              await deployChain(chainName, artifact)
-            }
-          } catch {}
-        })
-        ws.on('error', () => {})
-        ws.on('close', () => setTimeout(connect, 2000))
-      } catch { setTimeout(connect, 5000) }
-    }
-    connect()
-  })
 }
 
 export async function startDeployer() {
-  const { getExecutorAddress } = await import('./pimlico.js')
-  const execAddr = getExecutorAddress()
-  if (!execAddr) { console.log('[DEPLOY] No executor key'); return }
-
-  console.log('[DEPLOY] Executor: ' + execAddr)
-  console.log('[DEPLOY] Send 0.01 POL → deploys in <1 second → all chains live in 41 seconds')
-
   const artifact = await compile()
-  if (!artifact) { console.error('[DEPLOY] Compile failed'); return }
+  if (!artifact) return
 
-  // Try immediate deploy for already-funded chains
   const chains = getActiveChains()
+  const { addr } = computeCreate2Address(artifact.bytecode)
+  console.log('[DEPLOY] X7.sol CREATE2 address (all chains):', addr)
+
+  // Try immediate deploy for chains that already have balance
   for (const chain of chains) {
-    const balHex = await rpcCall(chain.name, 'eth_getBalance', [execAddr, 'latest']).catch(() => '0x0')
-    const bal    = BigInt(balHex || '0x0')
-    const needed = GAS_NEEDED[chain.name] || GAS_NEEDED.polygon
-    if (bal >= needed) {
-      console.log('[DEPLOY] ' + chain.name + ': already funded — deploying')
-      deployChain(chain.name, artifact).catch(() => {})
+    const existing = getContractAddr(chain.name)
+    if (existing) {
+      console.log('[DEPLOY]', chain.name, 'already live:', existing)
+      continue
     }
+    // Check balance
+    try {
+      const bal = BigInt(await import('./rpc.js').then(m => m.rpcCall(chain.name, 'eth_getBalance', [
+        (await import('./pimlico.js').then(m => m.getExecutorAddress())), 'latest'
+      ])) || '0x0')
+      if (bal > 0n) {
+        deployChain(chain.name).catch(() => {})
+      }
+    } catch {}
   }
-
-  // Start watchers — deploy the moment MATIC arrives
-  watchPendingTxs(execAddr, artifact)
-  watchNewHeads(execAddr, artifact)
-
-  // 30-second polling backup
-  setInterval(async () => {
-    for (const chain of getActiveChains()) {
-      const existing = getConfig('contract_' + chain.name)
-      if (existing?.startsWith('0x') && existing.length === 42) continue
-      if (DEPLOY_STATE[chain.name] === 'deploying') continue
-      const balHex = await rpcCall(chain.name, 'eth_getBalance', [execAddr, 'latest']).catch(() => '0x0')
-      const bal    = BigInt(balHex || '0x0')
-      const needed = GAS_NEEDED[chain.name] || GAS_NEEDED.polygon
-      setConfig('live_balance_' + chain.name, (Number(bal) / 1e18).toFixed(8))
-      if (bal >= needed) deployChain(chain.name, artifact).catch(() => {})
-    }
-  }, 30000)
 }
