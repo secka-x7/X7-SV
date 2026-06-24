@@ -1,5 +1,9 @@
 // X7-SV · deployer.js — CREATE2 zero-seed bootstrap
 // Contract deploys itself from profit of its own first trade
+// X7-SV · deployer.js — delegates to bootstrap.js (Architecture 1)
+// Kept for backward compatibility — all logic is now in bootstrap.js
+
+export { initBootstrap as startDeployer, triggerBootstrap, getBootstrapStatus } from './bootstrap.js'
 
 import { encodeAbiParameters, parseAbiParameters } from 'viem'
 import { compile } from './compiler.js'
